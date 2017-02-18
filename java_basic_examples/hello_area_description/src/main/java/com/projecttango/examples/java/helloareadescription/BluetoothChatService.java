@@ -120,6 +120,12 @@ public class BluetoothChatService extends Service {
         }
     };
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        sendMessage(intent.getStringExtra("position"));
+
+        return START_STICKY;
+    }
 
     // OnCreate, called once to initialize the activity.
     @Override
@@ -151,9 +157,7 @@ public class BluetoothChatService extends Service {
     }
 
     // Handler for mouse click on the send button.
-    public void sendClick(View view) {
-        String message = null;
-
+    public void sendMessage(String message) {
         if (tx == null || message == null || message.isEmpty()) {
             // Do nothing if there is no device or message to send.
             return;

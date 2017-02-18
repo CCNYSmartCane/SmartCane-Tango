@@ -433,6 +433,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mFileContentView.setText(landmarksStored);
 
                                     mCurrentLocationTextView.setText(mPositionString);
+                                    Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
+                                    serviceIntent.putExtra("position", mPositionString);
+                                    getApplicationContext().startService(serviceIntent);
+
                                     mStringx.setText(String.valueOf(xPose));
                                     mStringy.setText(String.valueOf(yPose));
                                     mStringz.setText(String.valueOf(zPose));
