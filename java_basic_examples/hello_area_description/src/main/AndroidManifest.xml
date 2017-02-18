@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
    Copyright 2014 Google Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,44 +16,49 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.projecttango.examples.java.helloareadescription"
     android:versionCode="0"
-    android:versionName="0" >
+    android:versionName="0">
 
     <uses-sdk
         android:minSdkVersion="17"
         android:targetSdkVersion="19" />
 
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <android:uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme">
         <uses-library
             android:name="com.projecttango.libtango_device2"
             android:required="true" />
+
         <activity
             android:name=".StartActivity"
             android:label="@string/app_name_long"
-            android:screenOrientation="nosensor" >
+            android:screenOrientation="nosensor">
             <intent-filter android:label="@string/app_name">
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-       <activity
+        <activity
             android:name=".HelloAreaDescriptionActivity"
             android:label="@string/app_name_long"
-            android:screenOrientation="nosensor">
-        </activity>
-         <activity
+            android:screenOrientation="nosensor" />
+        <activity
             android:name=".AdfUuidListViewActivity"
             android:label="@string/app_name_long"
-            android:screenOrientation="nosensor">
-        </activity>
+            android:screenOrientation="nosensor" />
+        <service android:name=".BluetoothChatService" />
+
     </application>
 
 </manifest>

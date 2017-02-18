@@ -18,6 +18,7 @@ package com.projecttango.examples.java.helloareadescription;
 
 import android.app.Activity;
 import android.app.FragmentManager;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -123,7 +124,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
 
-       // arrayLands = new float[20];
+        Intent bluetoothService = new Intent(this, BluetoothChatService.class);
+        startService(bluetoothService);
     }
 
     @Override
@@ -230,7 +232,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 //    Log.i("t = ", t.toString());
                // }
 
-              //  Log.d("Size of landmarks")
+              //  Log.BluetoothChatService("Size of landmarks")
 
                 Context context = getApplicationContext();
                 CharSequence text = "Landmark saved";
