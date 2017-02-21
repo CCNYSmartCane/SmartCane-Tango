@@ -1,3 +1,5 @@
+// Working off of https://github.com/tdicola/BTLETest
+
 package com.projecttango.examples.java.helloareadescription;
 
 import android.app.Service;
