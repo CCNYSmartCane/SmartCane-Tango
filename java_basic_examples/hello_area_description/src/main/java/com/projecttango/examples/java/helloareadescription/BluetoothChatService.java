@@ -122,7 +122,7 @@ public class BluetoothChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        sendMessage(intent.getStringExtra("position"));
+        sendMessage(intent.getFloatArrayExtra("position"));
 
         return START_STICKY;
     }
@@ -157,15 +157,20 @@ public class BluetoothChatService extends Service {
     }
 
     // Handler for mouse click on the send button.
-    public void sendMessage(String message) {
-        if (tx == null || message == null || message.isEmpty()) {
+    public void sendMessage(float[] message) {
+        if (tx == null || message == null) {
             // Do nothing if there is no device or message to send.
             return;
         }
         // Update TX characteristic value.  Note the setValue overload that takes a byte array must be used.
-        tx.setValue(message.getBytes(Charset.forName("UTF-8")));
+        ByteBuffer buffer = ByteBuffer.allocate(4 * message.length);
+        for (float value : message) {
+            buffer.putFloat(value);
+        }
+        tx.setValue(buffer.array());
+
         if (gatt.writeCharacteristic(tx)) {
-            android.util.Log.d(TAG, "Sent: " + message);
+            android.util.Log.d(TAG, "Sent: " + message[0] + ", " + message[1] + ", " + message[2]);
         }
         else {
             android.util.Log.d(TAG, "Couldn't write TX characteristic!");
