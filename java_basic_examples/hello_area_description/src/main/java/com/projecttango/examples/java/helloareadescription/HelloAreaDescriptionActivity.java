@@ -16,13 +16,14 @@
 
 package com.projecttango.examples.java.helloareadescription;
 
-import android.app.Activity;
 import android.app.FragmentManager;
+import android.app.ListActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -41,6 +42,7 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -57,7 +59,7 @@ import static java.lang.String.valueOf;
  * Main Activity class for the Area Description example. Handles the connection to the Tango service
  * and propagation of Tango pose data to Layout view.
  */
-public class HelloAreaDescriptionActivity extends Activity implements
+public class HelloAreaDescriptionActivity extends ListActivity implements
         SetAdfNameDialog.CallbackListener,
         SaveAdfTask.SaveAdfListener {
 
@@ -80,6 +82,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private EditText mLandmarkName;
     private Button mChooseLandButton;
     private EditText mDestLandmark;
+    private Button mSpeakButton;
 
     private float translation[];
 
@@ -115,6 +118,16 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private float yPose = 0.0f;
     private float zPose = 0.0f;
 
+    /** Items entered by the user is stored in this ArrayList variable */
+    private ArrayList<String> list = new ArrayList<String>();
+
+    /** Declaring an ArrayAdapter to set items to ListView */
+
+    private ArrayAdapter<String> adapter;
+
+   // private TextToSpeech mTts;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -122,6 +135,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         Intent intent = getIntent();
         mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
+       // mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
 
        // arrayLands = new float[20];
     }
@@ -209,6 +223,18 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mStringz = (TextView) findViewById(R.id.zString);
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
         mChooseLandButton = (Button) findViewById(R.id.chooseLandButton);
+        mSpeakButton = (Button) findViewById(R.id.speakButton);
+
+        /** Defining the ArrayAdapter to set items to ListView */
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, list);
+
+        mSpeakButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //ConvertTextToSpeech();
+            }
+        });
+
 
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -360,21 +386,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                 String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
 
                                 landmarksStored = "empty file";
-
                                 landmarksStored = readFile(adfFileName);
 
                                 Log.d("landmarksStored", landmarksStored);
 
-                                // String from file to json and then set values of translation
-
-                                /*float xPose = 0.0f;
-                                float yPose = 0.0f;
-                                float zPose = 0.0f;*/
-
-                                // Get pose from first landmark saved (for now)
-
-
-                                //String lastLandmark = landmarkName.get(landmarkName.size()-1);
                                 StringBuilder xNameBuilder = new StringBuilder();
                                 StringBuilder yNameBuilder = new StringBuilder();
                                 StringBuilder zNameBuilder = new StringBuilder();
@@ -386,6 +401,23 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                 String xName = xNameBuilder.toString();
                                 String yName = yNameBuilder.toString();
                                 String zName = zNameBuilder.toString();
+
+                                JSONArray storedJsonArray = null;
+                                try {
+                                    storedJsonArray = new JSONArray(landmarksStored);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                };
+
+                                try {
+                                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
+
+                                }catch (JSONException e){
+                                    e.printStackTrace();
+                                }
+
+
+
 
                                 try {
                                     JSONObject JSONlandmarks = new JSONObject(landmarksStored);
@@ -435,10 +467,25 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mStringy.setText(String.valueOf(yPose));
                                     mStringz.setText(String.valueOf(zPose));
 
+                                    float lowerBound_X = mDestinationTranslation[0] - 0.15f;
+                                    float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
+                                    float lowerBound_Z = mDestinationTranslation[2] - 0.15f;
 
-                                    mReachedDestinationTextView.setText(valueOf(((int) translation[0] == (int) mDestinationTranslation[0]) &&
+                                    float upperBound_X = mDestinationTranslation[0] + 0.15f;
+                                    float upperBound_Y = mDestinationTranslation[1] + 0.15f;
+                                    float upperBound_Z = mDestinationTranslation[2] + 0.15f;
+
+                                    if ((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
+                                            (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
+                                            (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )){
+                                        mDestinationTextView.setText("True");
+                                    }
+
+
+
+                                   /* mReachedDestinationTextView.setText(valueOf(((int) translation[0] == (int) mDestinationTranslation[0]) &&
                                             ((int) translation[1] == (int) mDestinationTranslation[1]) &&
-                                            ((int) translation[2] == (int) mDestinationTranslation[2])));
+                                            ((int) translation[2] == (int) mDestinationTranslation[2])));*/
 
                                 }
                             }
@@ -507,7 +554,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void saveLandmarks(String id){
 
-        // Check if this is called
+        // Save landmark coords (x,y,z) + waypoint name
 
         Log.d("Checking","save Landmarks to file is called");
 
@@ -542,9 +589,32 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         }
 
+
+
+        // Save just the landmarknames
+
+        JSONObject jsonObjectNames = new JSONObject();
+
+        for(int i=0; i<size; i++){
+            StringBuilder landNameBuilder = new StringBuilder();
+            landNameBuilder.append("landmark_" + i);
+            String landName = landNameBuilder.toString();
+
+            try {
+                jsonObjectNames.put(landName, landmarkName.get(i));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        JSONArray jsonAr = new JSONArray();
+        jsonAr.put(jsonObj);
+        jsonAr.put(jsonObjectNames);
+
+        // Store Json array with 2 json objects: the landmark names + the 3 coords for each landmark
         // Create a file in the Internal Storage
         String fileName = id; //name file with uuid
-        String content = jsonObj.toString();
+        String content = jsonAr.toString();
         Log.d("content", content);
         Log.d("filename", fileName);
 
@@ -558,8 +628,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
 
         Log.d("checking ", "success stored landmarks");
-
-
     }
 
     /**
@@ -637,4 +705,34 @@ public class HelloAreaDescriptionActivity extends Activity implements
         setAdfNameDialog.setArguments(bundle);
         setAdfNameDialog.show(manager, "ADFNameDialog");
     }
+
+
+  /*  @Override
+    public void onInit(int status) {
+        // TODO Auto-generated method stub
+        if(status == TextToSpeech.SUCCESS){
+            int result=mTts.setLanguage(Locale.US);
+            if(result==TextToSpeech.LANG_MISSING_DATA ||
+                    result==TextToSpeech.LANG_NOT_SUPPORTED){
+                Log.e("error", "This Language is not supported");
+            }
+            else{
+                ConvertTextToSpeech();
+            }
+        }
+        else
+            Log.e("error", "Initilization Failed!");
+    }
+
+    private void ConvertTextToSpeech() {
+        // TODO Auto-generated method stub
+        String text = "Testing Voice";
+        if(text==null||"".equals(text))
+        {
+            text = "Content not available";
+            mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        }else
+            mTts.speak(text+"is saved", TextToSpeech.QUEUE_FLUSH, null);
+    }*/
+
 }
