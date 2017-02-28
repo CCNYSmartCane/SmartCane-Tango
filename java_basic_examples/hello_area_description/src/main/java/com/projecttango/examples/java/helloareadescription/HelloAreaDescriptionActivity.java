@@ -441,10 +441,23 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mStringy.setText(String.valueOf(yPose));
                                     mStringz.setText(String.valueOf(zPose));
 
+                                    float lowerBound_X = mDestinationTranslation[0] - 0.15f;
+                                    float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
+                                    float lowerBound_Z = mDestinationTranslation[2] - 0.15f;
 
-                                    mReachedDestinationTextView.setText(valueOf(((int) translation[0] == (int) mDestinationTranslation[0]) &&
-                                            ((int) translation[1] == (int) mDestinationTranslation[1]) &&
-                                            ((int) translation[2] == (int) mDestinationTranslation[2])));
+                                    float upperBound_X = mDestinationTranslation[0] + 0.15f;
+                                    float upperBound_Y = mDestinationTranslation[1] + 0.15f;
+                                    float upperBound_Z = mDestinationTranslation[2] + 0.15f;
+
+                                    if ((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
+                                            (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
+                                            (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )){
+                                        mDestinationTextView.setText("True");
+                                    }
+//
+//                                    mReachedDestinationTextView.setText(valueOf(((int) translation[0] == (int) mDestinationTranslation[0]) &&
+//                                            ((int) translation[1] == (int) mDestinationTranslation[1]) &&
+//                                            ((int) translation[2] == (int) mDestinationTranslation[2])));
 
                                 }
                             }

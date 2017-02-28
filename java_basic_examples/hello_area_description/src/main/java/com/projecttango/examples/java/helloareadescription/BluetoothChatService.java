@@ -124,8 +124,9 @@ public class BluetoothChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        sendMessage(intent.getFloatArrayExtra("position"));
-
+        if (intent != null) {
+            sendMessage(intent.getFloatArrayExtra("position"));
+        }
         return START_STICKY;
     }
 
