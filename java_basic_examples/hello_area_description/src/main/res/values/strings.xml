@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
    Copyright 2014 Google Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,6 +62,7 @@
     <string name="localized">Localized</string>
     <string name="not_localized">Not Localized</string>
     <string name="tango_not_ready">"Tango is not ready yet!"</string>
+    <string name="bluetooth_permission">Bluetooth permission needed!</string>
     <string-array name="set_dialog_menu_items_api_space">
         <item>Rename</item>
         <item>Delete from API space</item>

@@ -18,6 +18,7 @@ package com.projecttango.examples.java.helloareadescription;
 
 import android.app.Activity;
 import android.app.FragmentManager;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -123,7 +124,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
 
-       // arrayLands = new float[20];
+        Intent bluetoothService = new Intent(this, BluetoothChatService.class);
+        startService(bluetoothService);
     }
 
     @Override
@@ -230,7 +232,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 //    Log.i("t = ", t.toString());
                // }
 
-              //  Log.d("Size of landmarks")
+              //  Log.BluetoothChatService("Size of landmarks")
 
                 Context context = getApplicationContext();
                 CharSequence text = "Landmark saved";
@@ -431,14 +433,31 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mFileContentView.setText(landmarksStored);
 
                                     mCurrentLocationTextView.setText(mPositionString);
+                                    Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
+                                    serviceIntent.putExtra("position", translation);
+                                    getApplicationContext().startService(serviceIntent);
+
                                     mStringx.setText(String.valueOf(xPose));
                                     mStringy.setText(String.valueOf(yPose));
                                     mStringz.setText(String.valueOf(zPose));
 
+                                    float lowerBound_X = mDestinationTranslation[0] - 0.15f;
+                                    float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
+                                    float lowerBound_Z = mDestinationTranslation[2] - 0.15f;
 
-                                    mReachedDestinationTextView.setText(valueOf(((int) translation[0] == (int) mDestinationTranslation[0]) &&
-                                            ((int) translation[1] == (int) mDestinationTranslation[1]) &&
-                                            ((int) translation[2] == (int) mDestinationTranslation[2])));
+                                    float upperBound_X = mDestinationTranslation[0] + 0.15f;
+                                    float upperBound_Y = mDestinationTranslation[1] + 0.15f;
+                                    float upperBound_Z = mDestinationTranslation[2] + 0.15f;
+
+                                    if ((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
+                                            (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
+                                            (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )){
+                                        mDestinationTextView.setText("True");
+                                    }
+//
+//                                    mReachedDestinationTextView.setText(valueOf(((int) translation[0] == (int) mDestinationTranslation[0]) &&
+//                                            ((int) translation[1] == (int) mDestinationTranslation[1]) &&
+//                                            ((int) translation[2] == (int) mDestinationTranslation[2])));
 
                                 }
                             }
