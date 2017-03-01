@@ -24,8 +24,10 @@ import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,6 +44,7 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -53,6 +56,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Locale;
 
+import static android.R.id.list;
 import static java.lang.String.valueOf;
 
 /**
@@ -118,14 +122,22 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     private float yPose = 0.0f;
     private float zPose = 0.0f;
 
-    /** Items entered by the user is stored in this ArrayList variable */
-    //private ArrayList<String> list = new ArrayList<String>();
+    private ArrayAdapter<String> adapter;
+
+    private ListView mListView;
+    // Waypoints recorded are stored in this ArrayList variable */
+   // private ArrayList<String> list = new ArrayList<String>();
 
     /** Declaring an ArrayAdapter to set items to ListView */
 
    // private ArrayAdapter<String> adapter;
 
     private TextToSpeech mTts;
+
+    private BooleanVariable upClicked;
+    private BooleanVariable downClicked;
+    private BooleanVariable selectClicked;
+
 
 
     @Override
@@ -137,7 +149,32 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
 
-       // arrayLands = new float[20];
+        upClicked = new BooleanVariable();
+        downClicked = new BooleanVariable();
+        selectClicked = new BooleanVariable();
+
+        upClicked.setListener(new BooleanVariable.ChangeListener() {
+            @Override
+            public void onChange() {
+
+            }
+        });
+
+        downClicked.setListener(new BooleanVariable.ChangeListener() {
+            @Override
+            public void onChange() {
+
+            }
+        });
+
+        selectClicked.setListener(new BooleanVariable.ChangeListener() {
+            @Override
+            public void onChange() {
+
+            }
+        });
+
+
     }
 
     @Override
@@ -224,6 +261,15 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
         mChooseLandButton = (Button) findViewById(R.id.chooseLandButton);
         mSpeakButton = (Button) findViewById(R.id.speakButton);
+        mListView = (ListView) findViewById(list);
+
+//        adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,list);
+//        if(mListView != null){
+//            mListView.setAdapter(adapter);
+//        }
+
+
+
 
         /** Defining the ArrayAdapter to set items to ListView */
       //  adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, list);
@@ -355,7 +401,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                 synchronized (mSharedLock) {
 
 
-                    //Log.i ("pose is called", String.valueOf(pose));
+                    Log.i ("pose is called", String.valueOf(pose));
                     currentPose = pose;
 
                     //Log.i("pose =",valueOf(currentPose));
@@ -376,7 +422,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                             stringBuilder.append("X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2]);
                             mPositionString = stringBuilder.toString();
 
-                            // Load saved landmarks and
+                            // Load saved landmarks from file corresponding to ADF name
 
                             ArrayList<String> fullUuidList;
                             // Returns a list of ADFs with their UUIDs
@@ -402,34 +448,53 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                 String yName = yNameBuilder.toString();
                                 String zName = zNameBuilder.toString();
 
-//                                JSONArray storedJsonArray = null;
-//                                try {
-//                                    storedJsonArray = new JSONArray(landmarksStored);
-//                                } catch (JSONException e) {
-//                                    e.printStackTrace();
-//                                };
-//
-//                                try {
-//                                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
-//
-//                                }catch (JSONException e){
-//                                    e.printStackTrace();
-//                                }
+                                // Create a json array from the string read from file
 
+                                JSONArray storedJsonArray = null;
+                                try {
+                                    storedJsonArray = new JSONArray(landmarksStored);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
 
+                                // First object in json array is the pose for each landmark in the corresponding
+                                // position
 
+                                // Get value of pose in x,y,z of the landmark chosen to navigate to
 
                                 try {
-                                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+                                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
                                     xPose = Float.valueOf(JSONlandmarks.getString(xName));
                                     yPose = Float.valueOf(JSONlandmarks.getString(yName));
                                     zPose = Float.valueOf(JSONlandmarks.getString(zName));
 
+                                }catch (JSONException e){
+                                    e.printStackTrace();
+                                }
 
+//                                try {
+//                                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+//                                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
+//                                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
+//                                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
+//
+//
+//                                } catch (JSONException e) {
+//                                    e.printStackTrace();
+//                                }
+
+                                try {
+                                    JSONObject JSONstoredNames = storedJsonArray.getJSONObject(1);
+                                    for (int i=0; i<JSONstoredNames.length(); i++){
+                                        //String name = JSONstoredNames.getString(Integer.toString(i));
+                                        //list.add(name);
+                                       // adapter.notifyDataSetChanged();
+                                    }
                                 } catch (JSONException e) {
                                     e.printStackTrace();
                                 }
                             }
+
 
                         } else {
                             mIsRelocalized = false;
@@ -478,7 +543,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                     if ((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
                                             (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
                                             (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )){
-                                        mDestinationTextView.setText("True");
+                                        mReachedDestinationTextView.setText("True");
                                     }
 
 
@@ -589,26 +654,36 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
             }
         }
 
+        // Save just the landmark names
 
+        JSONObject jsonObjectNames = new JSONObject();
 
-        // Save just the landmarknames
+        for(int i=0; i<size; i++){
+           // StringBuilder landNameBuilder = new StringBuilder();
+            //landNameBuilder.append("landmark_" + i);
+            //String landName = landNameBuilder.toString();
 
-//        JSONObject jsonObjectNames = new JSONObject();
-
-//        for(int i=0; i<size; i++){
-//            StringBuilder landNameBuilder = new StringBuilder();
-//            landNameBuilder.append("landmark_" + i);
-//            String landName = landNameBuilder.toString();
-//
-//            try {
-//                jsonObjectNames.put(landName, landmarkName.get(i));
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//        }
+            // Save as a key value pair -> {i:name}
+            try {
+                jsonObjectNames.put(Integer.toString(i), landmarkName.get(i));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
 
         String fileName = id; //name file with uuid
-        String content = jsonObj.toString();
+        //String content = jsonObj.toString();
+
+        JSONArray jsonAr = new JSONArray();
+        jsonAr.put(jsonObj);
+        jsonAr.put(jsonObjectNames);
+
+        // Store Json array with 2 json objects: the landmark names + the 3 coords for each landmark
+        // Create a file in the Internal Storage
+
+        String content = jsonAr.toString();
+        Log.d("content", content);
+        Log.d("filename", fileName);
 
         FileOutputStream outputStream = null;
         try {
@@ -618,28 +693,6 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
-
-//        JSONArray jsonAr = new JSONArray();
-//        jsonAr.put(jsonObj);
-//        jsonAr.put(jsonObjectNames);
-
-        // Store Json array with 2 json objects: the landmark names + the 3 coords for each landmark
-        // Create a file in the Internal Storage
-//        String fileName = id; //name file with uuid
-//        String content = jsonAr.toString();
-        Log.d("content", content);
-        Log.d("filename", fileName);
-
-//        FileOutputStream outputStream = null;
-//        try {
-//            outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
-//            outputStream.write(content.getBytes());
-//            outputStream.close();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
 
         Log.d("checking ", "success stored landmarks");
     }
@@ -723,7 +776,6 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
     @Override
     public void onInit(int status) {
-        // TODO Auto-generated method stub
         if(status == TextToSpeech.SUCCESS){
             int result=mTts.setLanguage(Locale.US);
             if(result==TextToSpeech.LANG_MISSING_DATA ||
@@ -739,22 +791,10 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     }
 
     private void ConvertTextToSpeech(String text) {
-        // TODO Auto-generated method stub
-        //text = "Testing Voice";
         if(text != null){
             mTts.speak(text,TextToSpeech.QUEUE_FLUSH,null);
         }
 
-
-
-
-//
-//        if(text==null||"".equals(text))
-//        {
-//            text = "Content not available";
-//            mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
-//        }else
-//            mTts.speak(text+"is saved", TextToSpeech.QUEUE_FLUSH, null);
     }
 
 }
