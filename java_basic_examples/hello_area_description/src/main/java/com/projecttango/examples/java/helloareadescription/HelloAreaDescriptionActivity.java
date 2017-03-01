@@ -50,6 +50,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 import static java.lang.String.valueOf;
 
@@ -114,6 +117,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private float xPose = 0.0f;
     private float yPose = 0.0f;
     private float zPose = 0.0f;
+
+    private Set<Node> coordinateSet = new HashSet<Node>();
+    private int maxX = 0;
+    private int minX = 0;
+    private int maxY = 0;
+    private int minY = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -349,6 +358,19 @@ public class HelloAreaDescriptionActivity extends Activity implements
                             translation = pose.getTranslationAsFloats();
                             stringBuilder.append("X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2]);
                             mPositionString = stringBuilder.toString();
+
+                            if (mIsLearningMode) { // Record coordinates for grid
+                                int x = (int)translation[0];
+                                int y = (int)translation[1];
+
+                                // Set the min and max to find the length of grid
+                                if(x > maxX) {maxX = x;}
+                                if(x < minX) {minX = x;}
+                                if(y > maxY) {maxY = y;}
+                                if(y < minY) {minY = y;}
+
+                                coordinateSet.add(new Node((int)translation[0], (int)translation[1]));
+                            }
 
                             // Load saved landmarks and
 
@@ -620,6 +642,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
         saveLandmarks(adfUuid);
+        saveCoordinateMatrix(adfUuid);
         finish();
     }
 
@@ -636,5 +659,33 @@ public class HelloAreaDescriptionActivity extends Activity implements
         SetAdfNameDialog setAdfNameDialog = new SetAdfNameDialog();
         setAdfNameDialog.setArguments(bundle);
         setAdfNameDialog.show(manager, "ADFNameDialog");
+    }
+
+    private void saveCoordinateMatrix(String fileName) {
+        int xLength = maxX - minX + 1;
+        int yLength = maxY - minY + 1;
+
+        boolean[][] coordinateMatrix = new boolean[xLength][yLength];
+
+        for(Node n: coordinateSet) {
+            coordinateMatrix[n.getX()][n.getY()] = true;
+        }
+
+        JSONObject jsonObj = new JSONObject();
+        try {
+            jsonObj.put("coordinateMatrix", coordinateMatrix);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        String content = jsonObj.toString();
+
+        try {
+            FileOutputStream outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
+            outputStream.write(content.getBytes());
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
