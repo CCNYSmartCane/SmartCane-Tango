@@ -42,6 +42,7 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -98,7 +99,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     private double mPreviousPoseTimeStamp;
     private double mTimeToNextUpdate = UPDATE_INTERVAL_MS;
 
-    private boolean mIsRelocalized;
+    private BooleanVariable mIsRelocalized;
     private boolean mIsLearningMode;
     private boolean mIsConstantSpaceRelocalize;
 
@@ -136,8 +137,17 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
+        mIsRelocalized = new BooleanVariable();
+        mIsRelocalized.setListener(new BooleanVariable.ChangeListener() {
+            @Override
+            public void onChange() {
+                if(mIsRelocalized.isBoo()){
+                    loadSavedWaypoints();
 
-       // arrayLands = new float[20];
+                }
+            }
+        });
+
     }
 
     @Override
@@ -192,7 +202,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
         // Clear the relocalization state: we don't know where the device will be since our app
         // will be paused.
-        mIsRelocalized = false;
+        mIsRelocalized.setBoo(false);
         synchronized (this) {
             try {
                 mTango.disconnect();
@@ -366,7 +376,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                             && pose.targetFrame == TangoPoseData
                             .COORDINATE_FRAME_DEVICE) {
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                            mIsRelocalized = true;
+                            mIsRelocalized.setBoo(true);
 
                             Log.i("mIsRelocalized = ", valueOf(mIsRelocalized));
 
@@ -376,63 +386,54 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                             stringBuilder.append("X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2]);
                             mPositionString = stringBuilder.toString();
 
-                            // Load saved landmarks and
+                            // Load saved landmarks
 
-                            ArrayList<String> fullUuidList;
-                            // Returns a list of ADFs with their UUIDs
-                            fullUuidList = mTango.listAreaDescriptions();
-                            if(fullUuidList.size() > 0) {
-
-                                String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
-
-                                landmarksStored = "empty file";
-                                landmarksStored = readFile(adfFileName);
-
-                                Log.d("landmarksStored", landmarksStored);
-
-                                StringBuilder xNameBuilder = new StringBuilder();
-                                StringBuilder yNameBuilder = new StringBuilder();
-                                StringBuilder zNameBuilder = new StringBuilder();
-
-                                xNameBuilder.append(chosenLandmark + "_x");
-                                yNameBuilder.append(chosenLandmark + "_y");
-                                zNameBuilder.append(chosenLandmark + "_z");
-
-                                String xName = xNameBuilder.toString();
-                                String yName = yNameBuilder.toString();
-                                String zName = zNameBuilder.toString();
-
+//                            ArrayList<String> fullUuidList;
+//                            // Returns a list of ADFs with their UUIDs
+//                            fullUuidList = mTango.listAreaDescriptions();
+//                            if(fullUuidList.size() > 0) {
+//
+//                                String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
+//
+//                                landmarksStored = "empty file";
+//                                landmarksStored = readFile(adfFileName);
+//
+//                                Log.d("landmarksStored", landmarksStored);
+//
+//                                StringBuilder xNameBuilder = new StringBuilder();
+//                                StringBuilder yNameBuilder = new StringBuilder();
+//                                StringBuilder zNameBuilder = new StringBuilder();
+//
+//                                xNameBuilder.append(chosenLandmark + "_x");
+//                                yNameBuilder.append(chosenLandmark + "_y");
+//                                zNameBuilder.append(chosenLandmark + "_z");
+//
+//                                String xName = xNameBuilder.toString();
+//                                String yName = yNameBuilder.toString();
+//                                String zName = zNameBuilder.toString();
+//
+//
 //                                JSONArray storedJsonArray = null;
 //                                try {
 //                                    storedJsonArray = new JSONArray(landmarksStored);
 //                                } catch (JSONException e) {
 //                                    e.printStackTrace();
-//                                };
+//                                }
 //
 //                                try {
 //                                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
+//                                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
+//                                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
+//                                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
 //
-//                                }catch (JSONException e){
+//
+//                                } catch (JSONException e) {
 //                                    e.printStackTrace();
 //                                }
-
-
-
-
-                                try {
-                                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
-                                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
-                                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
-                                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
-
-
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-                            }
+//                            }
 
                         } else {
-                            mIsRelocalized = false;
+                            mIsRelocalized.setBoo(false);
                         }
                     }
                 }
@@ -453,12 +454,12 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                         @Override
                         public void run() {
                             synchronized (mSharedLock) {
-                                mSaveAdfButton.setEnabled(mIsRelocalized);
-                                mRelocalizationTextView.setText(mIsRelocalized ?
+                                mSaveAdfButton.setEnabled(mIsRelocalized.isBoo());
+                                mRelocalizationTextView.setText(mIsRelocalized.isBoo() ?
                                         getString(R.string.localized) :
                                         getString(R.string.not_localized));
 
-                                if (mIsRelocalized) {
+                                if (mIsRelocalized.isBoo()) {
 
                                     mFileContentView.setText(landmarksStored);
 
@@ -478,7 +479,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                     if ((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
                                             (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
                                             (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )){
-                                        mDestinationTextView.setText("True");
+                                        mReachedDestinationTextView.setText("True");
                                     }
 
 
@@ -593,22 +594,29 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
         // Save just the landmarknames
 
-//        JSONObject jsonObjectNames = new JSONObject();
+        JSONObject jsonObjectNames = new JSONObject();
 
-//        for(int i=0; i<size; i++){
-//            StringBuilder landNameBuilder = new StringBuilder();
-//            landNameBuilder.append("landmark_" + i);
-//            String landName = landNameBuilder.toString();
-//
-//            try {
-//                jsonObjectNames.put(landName, landmarkName.get(i));
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//        }
+        for(int i=0; i<size; i++){
+            // Save as a key value pair -> {i:name}
+            try {
+                jsonObjectNames.put(Integer.toString(i), landmarkName.get(i));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
 
         String fileName = id; //name file with uuid
-        String content = jsonObj.toString();
+        //String content = jsonObj.toString();
+
+        JSONArray jsonAr = new JSONArray();
+        jsonAr.put(jsonObj);
+        jsonAr.put(jsonObjectNames);
+
+        String content = jsonAr.toString();
+
+        Log.d("content", content);
+        Log.d("filename", fileName);
 
         FileOutputStream outputStream = null;
         try {
@@ -620,26 +628,6 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         }
 
 
-
-//        JSONArray jsonAr = new JSONArray();
-//        jsonAr.put(jsonObj);
-//        jsonAr.put(jsonObjectNames);
-
-        // Store Json array with 2 json objects: the landmark names + the 3 coords for each landmark
-        // Create a file in the Internal Storage
-//        String fileName = id; //name file with uuid
-//        String content = jsonAr.toString();
-        Log.d("content", content);
-        Log.d("filename", fileName);
-
-//        FileOutputStream outputStream = null;
-//        try {
-//            outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
-//            outputStream.write(content.getBytes());
-//            outputStream.close();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
 
         Log.d("checking ", "success stored landmarks");
     }
@@ -720,7 +708,55 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         setAdfNameDialog.show(manager, "ADFNameDialog");
     }
 
+    private void loadSavedWaypoints(){
 
+        // Load saved landmarks
+
+        ArrayList<String> fullUuidList;
+        // Returns a list of ADFs with their UUIDs
+        fullUuidList = mTango.listAreaDescriptions();
+        if(fullUuidList.size() > 0) {
+
+            String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
+
+            landmarksStored = "empty file";
+            landmarksStored = readFile(adfFileName);
+
+            Log.d("landmarksStored", landmarksStored);
+
+            StringBuilder xNameBuilder = new StringBuilder();
+            StringBuilder yNameBuilder = new StringBuilder();
+            StringBuilder zNameBuilder = new StringBuilder();
+
+            xNameBuilder.append(chosenLandmark + "_x");
+            yNameBuilder.append(chosenLandmark + "_y");
+            zNameBuilder.append(chosenLandmark + "_z");
+
+            String xName = xNameBuilder.toString();
+            String yName = yNameBuilder.toString();
+            String zName = zNameBuilder.toString();
+
+
+            JSONArray storedJsonArray = null;
+            try {
+                storedJsonArray = new JSONArray(landmarksStored);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
+                xPose = Float.valueOf(JSONlandmarks.getString(xName));
+                yPose = Float.valueOf(JSONlandmarks.getString(yName));
+                zPose = Float.valueOf(JSONlandmarks.getString(zName));
+
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
     @Override
     public void onInit(int status) {
         // TODO Auto-generated method stub
