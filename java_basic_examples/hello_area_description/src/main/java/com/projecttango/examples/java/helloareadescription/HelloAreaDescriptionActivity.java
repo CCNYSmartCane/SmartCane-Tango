@@ -21,6 +21,7 @@ import android.app.FragmentManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Path;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -727,15 +728,24 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 PathFinder.xLength = xLength;
                 PathFinder.yLength = yLength;
                 PathFinder.coordinateMatrix = coordinateMatrix;
-                if(PathFinder.pathfind(new Node((int)translation[0], (int)translation[1]),
-                        new Node((int)mDestinationTranslation[0], (int)mDestinationTranslation[1]))) {
-                    Log.i(TAG, "Got path!");
 
-                    // Do something with PathFinder.path;
-                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+        }
+
+        if(PathFinder.pathfind(new Node((int)translation[0], (int)translation[1]),
+                new Node((int)mDestinationTranslation[0], (int)mDestinationTranslation[1]))) {
+            Toast t1 = Toast.makeText(getApplicationContext(), "Path Found", Toast.LENGTH_SHORT);
+            t1.show();
+
+            String path = "";
+            for(int i=PathFinder.path.size()-1; i>=0; i--) {
+                path += PathFinder.path.get(i).getX() + ", " + PathFinder.path.get(i).getY() + "\n";
+            }
+
+            Toast t2 = Toast.makeText(getApplicationContext(), path, Toast.LENGTH_LONG);
+            t2.show();
         }
     }
 }
