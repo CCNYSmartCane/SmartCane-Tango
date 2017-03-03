@@ -3,6 +3,7 @@ package com.projecttango.examples.java.helloareadescription;
 /**
  * Created by Christina on 3/1/17.
  */
+
 public class BooleanVariable {
     private boolean boo = false;
     private ChangeListener listener;
