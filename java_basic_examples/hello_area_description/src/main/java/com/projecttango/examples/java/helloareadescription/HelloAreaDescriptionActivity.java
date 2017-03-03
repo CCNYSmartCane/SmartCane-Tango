@@ -42,6 +42,7 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -104,7 +105,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private boolean mIsConstantSpaceRelocalize;
 
     private String mPositionString;
-    private float[] mDestinationTranslation = {(float)2, (float)0, (float)0};
+    private float[] mDestinationTranslation = new float[3];
 
     // Long-running task to save the ADF.
     private SaveAdfTask mSaveAdfTask;
@@ -115,9 +116,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private String landmarksStored;
     private String chosenLandmark;
-    private float xPose = 0.0f;
-    private float yPose = 0.0f;
-    private float zPose = 0.0f;
 
     private Set<Node> coordinateSet = new HashSet<Node>();
     private int maxX = 0;
@@ -226,7 +224,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             public void onClick(View view) {
 
                 chosenLandmark = mDestLandmark.getText().toString();
-
+                handlePathFinding();
             }
         });
 
@@ -268,23 +266,19 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 // Hide to save ADF button if leanring mode is off.
                 mSaveAdfButton.setVisibility(View.GONE);
             }
-        }
 
-
-            if (isLoadAdf) {
-                ArrayList<String> fullUuidList;
-                // Returns a list of ADFs with their UUIDs
-                fullUuidList = tango.listAreaDescriptions();
-                if (fullUuidList.size() == 0) {
-                    mUuidTextView.setText(R.string.no_uuid);
-                } else {
-                    mUuidTextView.setText(getString(R.string.number_of_adfs) + fullUuidList.size()
-                            + getString(R.string.latest_adf_is)
-                            + fullUuidList.get(fullUuidList.size() - 1));
-                }
+            ArrayList<String> fullUuidList;
+            // Returns a list of ADFs with their UUIDs
+            fullUuidList = tango.listAreaDescriptions();
+            if (fullUuidList.size() == 0) {
+                mUuidTextView.setText(R.string.no_uuid);
+            } else {
+                mUuidTextView.setText(getString(R.string.number_of_adfs) + fullUuidList.size()
+                        + getString(R.string.latest_adf_is)
+                        + fullUuidList.get(fullUuidList.size() - 1));
             }
         }
-
+    }
 
     /**
      * Sets up the tango configuration object. Make sure mTango object is initialized before
@@ -413,9 +407,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                                 try {
                                     JSONObject JSONlandmarks = new JSONObject(landmarksStored);
-                                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
-                                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
-                                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
+                                    mDestinationTranslation[0] = Float.valueOf(JSONlandmarks.getString(xName));
+                                    mDestinationTranslation[1] = Float.valueOf(JSONlandmarks.getString(yName));
+                                    mDestinationTranslation[2] = Float.valueOf(JSONlandmarks.getString(zName));
 
 
                                 } catch (JSONException e) {
@@ -459,9 +453,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     serviceIntent.putExtra("position", translation);
                                     getApplicationContext().startService(serviceIntent);
 
-                                    mStringx.setText(String.valueOf(xPose));
-                                    mStringy.setText(String.valueOf(yPose));
-                                    mStringz.setText(String.valueOf(zPose));
+                                    mStringx.setText(String.valueOf(mDestinationTranslation[0]));
+                                    mStringy.setText(String.valueOf(mDestinationTranslation[1]));
+                                    mStringz.setText(String.valueOf(mDestinationTranslation[2]));
 
                                     float lowerBound_X = mDestinationTranslation[0] - 0.15f;
                                     float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
@@ -705,6 +699,43 @@ public class HelloAreaDescriptionActivity extends Activity implements
             outputStream.close();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void handlePathFinding() {
+        // TODO: Need to remove and refactor duplicate readFile from current ADF selected
+        ArrayList<String> fullUuidList;
+        // Returns a list of ADFs with their UUIDs
+        fullUuidList = mTango.listAreaDescriptions();
+        if (fullUuidList.size() > 0) {
+
+            String jsonString = readFile(fullUuidList.get(fullUuidList.size() - 1));
+            try {
+                JSONObject jsonObj = new JSONObject(jsonString);
+                JSONArray array = jsonObj.getJSONArray("coordinateMatrix");
+
+                int xLength = array.length();
+                int yLength = array.getJSONArray(0).length();
+                boolean[][] coordinateMatrix = new boolean[xLength][yLength];
+
+                for(int i=0; i<xLength; i++) {
+                    for(int j=0; j<yLength; j++) {
+                        coordinateMatrix[i][j] = Boolean.valueOf(array.getJSONArray(i).getString(j));
+                    }
+                }
+
+                PathFinder.xLength = xLength;
+                PathFinder.yLength = yLength;
+                PathFinder.coordinateMatrix = coordinateMatrix;
+                if(PathFinder.pathfind(new Node((int)translation[0], (int)translation[1]),
+                        new Node((int)mDestinationTranslation[0], (int)mDestinationTranslation[1]))) {
+                    Log.i(TAG, "Got path!");
+
+                    // Do something with PathFinder.path;
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
