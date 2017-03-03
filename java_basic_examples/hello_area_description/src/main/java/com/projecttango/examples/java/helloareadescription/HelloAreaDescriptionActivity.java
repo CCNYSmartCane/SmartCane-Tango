@@ -42,7 +42,6 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -99,7 +98,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     private double mPreviousPoseTimeStamp;
     private double mTimeToNextUpdate = UPDATE_INTERVAL_MS;
 
-    private BooleanVariable mIsRelocalized;
+    private boolean mIsRelocalized;
     private boolean mIsLearningMode;
     private boolean mIsConstantSpaceRelocalize;
 
@@ -119,6 +118,10 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     private float yPose = 0.0f;
     private float zPose = 0.0f;
 
+    private BooleanVariable upClicked;
+    private BooleanVariable downClicked;
+    private BooleanVariable selectClicked;
+
     /** Items entered by the user is stored in this ArrayList variable */
     //private ArrayList<String> list = new ArrayList<String>();
 
@@ -137,16 +140,28 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
-        mIsRelocalized = new BooleanVariable();
-        mIsRelocalized.setListener(new BooleanVariable.ChangeListener() {
+       // mIsRelocalized = new BooleanVariable();
+       // mIsRelocalized.setBoo(false);
+//        mIsRelocalized.setListener(new BooleanVariable.ChangeListener() {
+//            @Override
+//            public void onChange() {
+//                if(mIsRelocalized.isBoo()){
+//                    loadSavedWaypoints();
+//
+//                }
+//            }
+//        });
+
+        upClicked = new BooleanVariable();
+        upClicked.setListener(new BooleanVariable.ChangeListener() {
             @Override
             public void onChange() {
-                if(mIsRelocalized.isBoo()){
-                    loadSavedWaypoints();
 
-                }
             }
         });
+
+        downClicked = new BooleanVariable();
+        selectClicked = new BooleanVariable();
 
     }
 
@@ -202,7 +217,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
         // Clear the relocalization state: we don't know where the device will be since our app
         // will be paused.
-        mIsRelocalized.setBoo(false);
+        mIsRelocalized = false;
         synchronized (this) {
             try {
                 mTango.disconnect();
@@ -376,8 +391,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                             && pose.targetFrame == TangoPoseData
                             .COORDINATE_FRAME_DEVICE) {
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                            mIsRelocalized.setBoo(true);
-
+                            mIsRelocalized = true;
                             Log.i("mIsRelocalized = ", valueOf(mIsRelocalized));
 
                             StringBuilder stringBuilder = new StringBuilder();
@@ -388,52 +402,55 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
                             // Load saved landmarks
 
-//                            ArrayList<String> fullUuidList;
-//                            // Returns a list of ADFs with their UUIDs
-//                            fullUuidList = mTango.listAreaDescriptions();
-//                            if(fullUuidList.size() > 0) {
-//
-//                                String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
-//
-//                                landmarksStored = "empty file";
-//                                landmarksStored = readFile(adfFileName);
-//
-//                                Log.d("landmarksStored", landmarksStored);
-//
-//                                StringBuilder xNameBuilder = new StringBuilder();
-//                                StringBuilder yNameBuilder = new StringBuilder();
-//                                StringBuilder zNameBuilder = new StringBuilder();
-//
-//                                xNameBuilder.append(chosenLandmark + "_x");
-//                                yNameBuilder.append(chosenLandmark + "_y");
-//                                zNameBuilder.append(chosenLandmark + "_z");
-//
-//                                String xName = xNameBuilder.toString();
-//                                String yName = yNameBuilder.toString();
-//                                String zName = zNameBuilder.toString();
-//
-//
-//                                JSONArray storedJsonArray = null;
+                            //loadSavedWaypoints();
+
+                            ArrayList<String> fullUuidList;
+                            // Returns a list of ADFs with their UUIDs
+                            fullUuidList = mTango.listAreaDescriptions();
+                            if(fullUuidList.size() > 0) {
+
+                                String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
+
+                                landmarksStored = "empty file";
+                                landmarksStored = readFile(adfFileName);
+
+                                Log.d("landmarksStored", landmarksStored);
+
+                                StringBuilder xNameBuilder = new StringBuilder();
+                                StringBuilder yNameBuilder = new StringBuilder();
+                                StringBuilder zNameBuilder = new StringBuilder();
+
+                                xNameBuilder.append(chosenLandmark + "_x");
+                                yNameBuilder.append(chosenLandmark + "_y");
+                                zNameBuilder.append(chosenLandmark + "_z");
+
+                                String xName = xNameBuilder.toString();
+                                String yName = yNameBuilder.toString();
+                                String zName = zNameBuilder.toString();
+
+
+//                                JSONArray storedJsonObject = null;
 //                                try {
-//                                    storedJsonArray = new JSONArray(landmarksStored);
+//                                    storedJsonObject = new JSONArray(landmarksStored);
 //                                } catch (JSONException e) {
 //                                    e.printStackTrace();
 //                                }
-//
-//                                try {
-//                                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
-//                                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
-//                                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
-//                                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
-//
-//
-//                                } catch (JSONException e) {
-//                                    e.printStackTrace();
-//                                }
-//                            }
+
+                                try {
+                                    //JSONObject JSONlandmarks = storedJsonObject.getJSONObject();
+                                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+                                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
+                                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
+                                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
+
+
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                            }
 
                         } else {
-                            mIsRelocalized.setBoo(false);
+                            mIsRelocalized = false;
                         }
                     }
                 }
@@ -454,12 +471,12 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                         @Override
                         public void run() {
                             synchronized (mSharedLock) {
-                                mSaveAdfButton.setEnabled(mIsRelocalized.isBoo());
-                                mRelocalizationTextView.setText(mIsRelocalized.isBoo() ?
+                                mSaveAdfButton.setEnabled(mIsRelocalized);
+                                mRelocalizationTextView.setText(mIsRelocalized ?
                                         getString(R.string.localized) :
                                         getString(R.string.not_localized));
 
-                                if (mIsRelocalized.isBoo()) {
+                                if (mIsRelocalized) {
 
                                     mFileContentView.setText(landmarksStored);
 
@@ -468,13 +485,13 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                     mStringy.setText(String.valueOf(yPose));
                                     mStringz.setText(String.valueOf(zPose));
 
-                                    float lowerBound_X = mDestinationTranslation[0] - 0.15f;
-                                    float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
-                                    float lowerBound_Z = mDestinationTranslation[2] - 0.15f;
+                                    float lowerBound_X = xPose - 0.15f;
+                                    float lowerBound_Y = yPose - 0.15f;
+                                    float lowerBound_Z = zPose - 0.15f;
 
-                                    float upperBound_X = mDestinationTranslation[0] + 0.15f;
-                                    float upperBound_Y = mDestinationTranslation[1] + 0.15f;
-                                    float upperBound_Z = mDestinationTranslation[2] + 0.15f;
+                                    float upperBound_X = xPose + 0.15f;
+                                    float upperBound_Y = yPose + 0.15f;
+                                    float upperBound_Z = zPose + 0.15f;
 
                                     if ((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
                                             (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
@@ -592,28 +609,28 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
 
 
-        // Save just the landmarknames
-
-        JSONObject jsonObjectNames = new JSONObject();
-
-        for(int i=0; i<size; i++){
-            // Save as a key value pair -> {i:name}
-            try {
-                jsonObjectNames.put(Integer.toString(i), landmarkName.get(i));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
+//        // Save just the landmarknames
+//
+//        JSONObject jsonObjectNames = new JSONObject();
+//
+//        for(int i=0; i<size; i++){
+//            // Save as a key value pair -> {i:name}
+//            try {
+//                jsonObjectNames.put(Integer.toString(i), landmarkName.get(i));
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+//        }
 
 
         String fileName = id; //name file with uuid
-        //String content = jsonObj.toString();
+        String content = jsonObj.toString();
 
-        JSONArray jsonAr = new JSONArray();
-        jsonAr.put(jsonObj);
-        jsonAr.put(jsonObjectNames);
+        //JSONArray jsonAr = new JSONArray();
+        //jsonAr.put(jsonObj);
+        //jsonAr.put(jsonObjectNames);
 
-        String content = jsonAr.toString();
+        //String content = jsonAr.toString();
 
         Log.d("content", content);
         Log.d("filename", fileName);
@@ -708,55 +725,57 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         setAdfNameDialog.show(manager, "ADFNameDialog");
     }
 
-    private void loadSavedWaypoints(){
-
-        // Load saved landmarks
-
-        ArrayList<String> fullUuidList;
-        // Returns a list of ADFs with their UUIDs
-        fullUuidList = mTango.listAreaDescriptions();
-        if(fullUuidList.size() > 0) {
-
-            String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
-
-            landmarksStored = "empty file";
-            landmarksStored = readFile(adfFileName);
-
-            Log.d("landmarksStored", landmarksStored);
-
-            StringBuilder xNameBuilder = new StringBuilder();
-            StringBuilder yNameBuilder = new StringBuilder();
-            StringBuilder zNameBuilder = new StringBuilder();
-
-            xNameBuilder.append(chosenLandmark + "_x");
-            yNameBuilder.append(chosenLandmark + "_y");
-            zNameBuilder.append(chosenLandmark + "_z");
-
-            String xName = xNameBuilder.toString();
-            String yName = yNameBuilder.toString();
-            String zName = zNameBuilder.toString();
-
-
-            JSONArray storedJsonArray = null;
-            try {
-                storedJsonArray = new JSONArray(landmarksStored);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            try {
-                JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
-                xPose = Float.valueOf(JSONlandmarks.getString(xName));
-                yPose = Float.valueOf(JSONlandmarks.getString(yName));
-                zPose = Float.valueOf(JSONlandmarks.getString(zName));
-
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
+//    private void loadSavedWaypoints(){
+//
+//        // Load saved landmarks
+//
+//        ArrayList<String> fullUuidList;
+//        // Returns a list of ADFs with their UUIDs
+//        fullUuidList = mTango.listAreaDescriptions();
+//        if(fullUuidList.size() > 0) {
+//
+//            String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
+//
+//            landmarksStored = "empty file";
+//            landmarksStored = readFile(adfFileName);
+//
+//            Log.d("landmarksStored", landmarksStored);
+//
+//            StringBuilder xNameBuilder = new StringBuilder();
+//            StringBuilder yNameBuilder = new StringBuilder();
+//            StringBuilder zNameBuilder = new StringBuilder();
+//
+//            xNameBuilder.append(chosenLandmark + "_x");
+//            yNameBuilder.append(chosenLandmark + "_y");
+//            zNameBuilder.append(chosenLandmark + "_z");
+//
+//            String xName = xNameBuilder.toString();
+//            String yName = yNameBuilder.toString();
+//            String zName = zNameBuilder.toString();
+//
+//
+//            JSONArray storedJsonArray = null;
+//            try {
+//                storedJsonArray = new JSONArray(landmarksStored);
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+//
+//            try {
+//                if (storedJsonArray != null) {
+//                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
+//                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
+//                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
+//                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
+//                }
+//
+//
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//    }
     @Override
     public void onInit(int status) {
         // TODO Auto-generated method stub
