@@ -770,7 +770,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         float w = quaternion[3];
 
         // yaw (z-axis rotation)
-        double t1 = 2.0 * (x*y*z*w);
+        double t1 = 2.0 * (w*z+x*y);
         double t2 = 1.0 - 2.0 * (y*y+z*z);
         return Math.toDegrees(Math.atan2(t1, t2));
     }
