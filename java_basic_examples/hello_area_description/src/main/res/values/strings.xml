@@ -58,6 +58,7 @@
     <string name="relocalization_status">Relocalization Status:</string>
     <string name="current_location">Current Location:</string>
     <string name="destination">Destination:</string>
+    <string name="z_rotation">Z Rotation:</string>
     <string name="reached_destination">Reached_Destination:</string>
     <string name="localized">Localized</string>
     <string name="not_localized">Not Localized</string>

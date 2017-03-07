@@ -71,6 +71,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private TextView mUuidTextView;
     private TextView mRelocalizationTextView;
     private TextView mCurrentLocationTextView;
+    private TextView mZRotationTextView;
     private TextView mDestinationTextView;
     private TextView mReachedDestinationTextView;
     private TextView mFileContentView;
@@ -84,7 +85,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private Button mChooseLandButton;
     private EditText mDestLandmark;
 
-    private float translation[];
+    private float[] translation;
+    private float[] orientation;
 
     private ArrayList<TangoPoseData> landmarkList = new ArrayList<TangoPoseData>();
     private ArrayList<String> landmarkName = new ArrayList<String>();
@@ -99,6 +101,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private boolean mIsConstantSpaceRelocalize;
 
     private String mPositionString;
+    private String mZRotationString;
     private float[] mDestinationTranslation = new float[3];
 
     // Long-running task to save the ADF.
@@ -203,6 +206,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mRelocalizationTextView = (TextView) findViewById(R.id.relocalization_textview);
         mDestinationTextView = (TextView) findViewById(R.id.destination_textview);
         mCurrentLocationTextView = (TextView) findViewById(R.id.current_location_textview);
+        mZRotationTextView = (TextView) findViewById(R.id.z_rotation_textview);
         mReachedDestinationTextView = (TextView) findViewById(R.id.reached_destination_textview);
         mSaveLandButton = (Button) findViewById(R.id.land_button);
         mLandmarkName = (EditText) findViewById(R.id.landmarkName);
@@ -385,8 +389,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
                             StringBuilder stringBuilder = new StringBuilder();
 
                             translation = pose.getTranslationAsFloats();
+                            orientation = pose.getRotationAsFloats();
+
                             stringBuilder.append("X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2]);
                             mPositionString = stringBuilder.toString();
+                            mZRotationString = String.valueOf(getEulerAngleZ(orientation));
 
                             if (mIsLearningMode) { // Record coordinates for grid
                                 int x = Math.round(translation[0]);
@@ -429,9 +436,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                                 if (mIsRelocalized) {
 
-                                    mFileContentView.setText(landmarksStored);
+//                                    mFileContentView.setText(landmarksStored);
 
                                     mCurrentLocationTextView.setText(mPositionString);
+                                    mZRotationTextView.setText(mZRotationString);
+
                                     Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
                                     serviceIntent.putExtra("position", translation);
                                     getApplicationContext().startService(serviceIntent);
@@ -740,5 +749,18 @@ public class HelloAreaDescriptionActivity extends Activity implements
             Toast t2 = Toast.makeText(getApplicationContext(), path, Toast.LENGTH_LONG);
             t2.show();
         }
+    }
+
+    private double getEulerAngleZ(float[] quaternion)
+    {
+        float x = quaternion[0];
+        float y = quaternion[1];
+        float z = quaternion[2];
+        float w = quaternion[3];
+
+        // yaw (z-axis rotation)
+        double t1 = 2.0 * (x*y*z*w);
+        double t2 = 1.0 - 2.0 * (y*y+z*z);
+        return Math.toDegrees(Math.atan2(t1, t2));
     }
 }
