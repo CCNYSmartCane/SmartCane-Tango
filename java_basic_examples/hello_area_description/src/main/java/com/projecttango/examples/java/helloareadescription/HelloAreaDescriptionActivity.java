@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Path;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -115,10 +116,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private String chosenLandmark;
 
     private Set<Node> coordinateSet = new HashSet<Node>();
-    private int maxX = 0;
-    private int minX = 0;
-    private int maxY = 0;
-    private int minY = 0;
+    private float maxX = 0;
+    private float minX = 0;
+    private float maxY = 0;
+    private float minY = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -396,8 +397,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
 
                             if (mIsLearningMode) { // Record coordinates for grid
-                                int x = Math.round(translation[0]);
-                                int y = Math.round(translation[1]);
+                                float x = roundToNearestHalf(translation[0]);
+                                float y = roundToNearestHalf(translation[1]);
 
                                 // Set the min and max to find the length of grid
                                 if(x > maxX) {maxX = x;}
@@ -405,7 +406,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                 if(y > maxY) {maxY = y;}
                                 if(y < minY) {minY = y;}
 
-                                coordinateSet.add(new Node(Math.round(translation[0]), Math.round(translation[1])));
+                                coordinateSet.add(new Node((int)(x*2), (int)(y*2)));
                             }
                         } else {
                             mIsRelocalized = false;
@@ -656,21 +657,23 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     private void saveCoordinateMatrix(String fileName) {
-        int xLength = maxX - minX + 1;
-        int yLength = maxY - minY + 1;
+        int xLength = (int)((maxX - minX)*2) + 1;
+        int yLength = (int)((maxY - minY)*2) + 1;
+        int offsetX = Math.abs((int)(minX*2));
+        int offsetY = Math.abs((int)(minY*2));
 
         boolean[][] coordinateMatrix = new boolean[xLength][yLength];
 
         for(Node n: coordinateSet) {
-            coordinateMatrix[n.getX()+Math.abs(minX)][n.getY()+Math.abs(minY)] = true;
+            coordinateMatrix[n.getX()+offsetX][n.getY()+offsetY] = true;
         }
 
         JSONObject jsonObj = null;
         try {
             jsonObj = new JSONObject(readFile(fileName));
             jsonObj.put("coordinateMatrix", new JSONArray(coordinateMatrix));
-            jsonObj.put("minX", minX);
-            jsonObj.put("minY", minY);
+            jsonObj.put("offsetX", offsetX);
+            jsonObj.put("offsetY", offsetY);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -688,6 +691,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void handlePathFinding() {
         // TODO: Need to remove and refactor duplicate readFile from current ADF selected
+        int offsetX = 0;
+        int offsetY = 0;
+
         ArrayList<String> fullUuidList;
         // Returns a list of ADFs with their UUIDs
         fullUuidList = mTango.listAreaDescriptions();
@@ -696,8 +702,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
             String jsonString = readFile(fullUuidList.get(fullUuidList.size() - 1));
             try {
                 JSONObject jsonObj = new JSONObject(jsonString);
-                minX = jsonObj.getInt("minX");
-                minY = jsonObj.getInt("minY");
+                offsetX = jsonObj.getInt("offsetX");
+                offsetY = jsonObj.getInt("offsetY");
 
                 JSONArray array = jsonObj.getJSONArray("coordinateMatrix");
 
@@ -723,18 +729,23 @@ public class HelloAreaDescriptionActivity extends Activity implements
         String s = "";
         for(int i=0; i<PathFinder.xLength; i++) {
             for(int j=0; j<PathFinder.yLength; j++) {
-                s += PathFinder.coordinateMatrix[i][j] + ", ";
+                if (PathFinder.coordinateMatrix[i][j]) {
+                    s += i + ", " + j + "\n";
+                }
             }
-            s += "\n";
         }
+        Log.i("Matrix", s);
 
-        // Add the min to offset
-        Node start = new Node(Math.round(translation[0])+Math.abs(minX), Math.round(translation[1])+Math.abs(minY));
-        Node end = new Node(Math.round(mDestinationTranslation[0])+Math.abs(minX), Math.round(mDestinationTranslation[1])+Math.abs(minY));
+        // Add the offset
+        Node start = new Node((int)(roundToNearestHalf(translation[0])*2)+offsetX,
+                (int)(roundToNearestHalf(translation[1])*2)+offsetY);
+        Node end = new Node((int)(roundToNearestHalf(mDestinationTranslation[0])*2)+offsetX,
+                (int)(roundToNearestHalf(mDestinationTranslation[1])*2)+offsetY);
 
-        // TODO: Should change scale to be a rounding of .5 rather than 1.0
-        Log.i("PathFinder", "start: " + String.valueOf(start.getX()-Math.abs(minX)) + ", " + String.valueOf(start.getY()-Math.abs(minY)));
-        Log.i("PathFinder", "end: " + String.valueOf(end.getX()-Math.abs(minX)) + ", " + String.valueOf(end.getY()-Math.abs(minY)));
+        Log.i("PathFinder", "Start: " + start.getX() + ", " + start.getY());
+        Log.i("PathFinder", "End: " + end.getX() + ", " + end.getY());
+        Log.i("PathFinder", "Size: " + PathFinder.xLength + ", " + PathFinder.yLength);
+
 
         if(PathFinder.pathfind(start, end)) {
             Toast t1 = Toast.makeText(getApplicationContext(), "Path Found!", Toast.LENGTH_SHORT);
@@ -742,8 +753,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
             String path = "";
             for(int i=PathFinder.path.size()-1; i>=0; i--) {
-                // Subtract min to remove offset
-                path += String.valueOf(PathFinder.path.get(i).getX()-Math.abs(minX)) + ", " + String.valueOf(PathFinder.path.get(i).getY()-Math.abs(minY)) + "\n";
+                // Remove offset and get real world coordinates
+                path += String.valueOf((PathFinder.path.get(i).getX()-offsetX)/2.0) + ", " + String.valueOf((PathFinder.path.get(i).getY()-offsetY)/2.0) + "\n";
             }
 
             Toast t2 = Toast.makeText(getApplicationContext(), path, Toast.LENGTH_LONG);
@@ -762,5 +773,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         double t1 = 2.0 * (x*y*z*w);
         double t2 = 1.0 - 2.0 * (y*y+z*z);
         return Math.toDegrees(Math.atan2(t1, t2));
+    }
+
+    private float roundToNearestHalf(float f) {
+        return ((float)Math.round(f*2))/2;
     }
 }
