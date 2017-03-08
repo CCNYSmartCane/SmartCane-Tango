@@ -13,7 +13,8 @@ class PathFinder {
     static int xLength;
     static int yLength;
     static boolean[][] coordinateMatrix;
-    static List<Node> path;
+    static List<Node> totalPath;
+    static List<Node> squashedPath;
 
     public static boolean pathfind(Node start, Node goal) {
         List<Node> closedList = new ArrayList<Node>();
@@ -28,7 +29,12 @@ class PathFinder {
             Node current = openList.remove();
 
             if (current.equals(goal)) {
-                path = reconstructPath(current);
+                totalPath = reconstructPath(current);
+                if(totalPath.size() > 2) {
+                    squashedPath = squashPath(totalPath);
+                } else {
+                    squashedPath = totalPath;
+                }
                 return true;
             }
 
@@ -100,5 +106,39 @@ class PathFinder {
         return neighbors;
     }
 
+    private static List<Node> squashPath(List<Node> path) {
+        List<Node> squashedPath = new ArrayList<Node>();
+        Node current;
+        Node next;
+        int xDiff = 0;
+        int yDiff = 0;
+
+        for (int i = 0; i < path.size(); i++) {
+            current = path.get(i);
+            squashedPath.add(current);
+
+            if (i + 1 != path.size()) {
+                next = path.get(i + 1);
+                xDiff = next.getX() - current.getX();
+                yDiff = next.getY() - current.getY();
+                current = next;
+            }
+            for (int j = i + 2; j < path.size(); j++) {
+                next = path.get(j);
+                if (((next.getX() - current.getX()) != xDiff) || ((next.getY() - current.getY()) != yDiff)) {
+                    // end of straight path
+                    i = j - 2;
+                    break;
+                } else {
+                    // continue straight path
+                    current = next;
+                }
+                // finishes checking path list, so ensure the last node is
+                // inserted
+                i = j - 1;
+            }
+        }
+        return squashedPath;
+    }
 }
 
