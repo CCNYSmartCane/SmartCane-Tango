@@ -124,7 +124,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private int offsetY = 0;
 
     private List<Node> squashedPath;
-    private double[] rotationsArray;
+    private float[] rotationsArray;
     private boolean mIsNavigatingMode = false;
     private int waypointIterator;
 
@@ -441,9 +441,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mCurrentLocationTextView.setText(mPositionString);
                                     mZRotationTextView.setText(mZRotationString);
 
-                                    Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
-                                    serviceIntent.putExtra("position", translation);
-                                    getApplicationContext().startService(serviceIntent);
+//                                    Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
+//                                    serviceIntent.putExtra("position", translation);
+//                                    getApplicationContext().startService(serviceIntent);
 
                                     float lowerBound_X = mDestinationTranslation[0] - 0.15f;
                                     float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
@@ -773,15 +773,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     private void getRotationsArray(List<Node> squashedPath) {
-        rotationsArray = new double[squashedPath.size()];
-        rotationsArray[0] = getEulerAngleZ(orientation);
+        rotationsArray = new float[squashedPath.size()];
+        rotationsArray[0] = (float)getEulerAngleZ(orientation);
         for (int i=1; i<rotationsArray.length; i++) {
             Node curr = squashedPath.get(i);
             Node prev = squashedPath.get(i-1);
             double yDiff = curr.getY() - prev.getY();
             double xDiff = curr.getX() - prev.getX();
 
-            rotationsArray[i] = (Math.toDegrees(Math.atan2(yDiff, xDiff)) + 360) % 360;
+            rotationsArray[i] = ((float)Math.toDegrees(Math.atan2(yDiff, xDiff)) + 360) % 360;
         }
     }
 
@@ -806,7 +806,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
 
         // Calculate the necessary rotation difference
-        double rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator-1];
+        float rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator-1];
         if(Math.abs(rotationDiff) > 180) {
             if (rotationDiff > 0) {
                 rotationDiff = rotationDiff - 360;
@@ -823,5 +823,13 @@ public class HelloAreaDescriptionActivity extends Activity implements
             t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
         }
         t.show();
+
+        // Send rotation through bluetooth
+        float[] rotation = new float[1];
+        rotation[0] = rotationDiff;
+
+        Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
+        serviceIntent.putExtra("rotation", rotation);
+        getApplicationContext().startService(serviceIntent);
     }
 }

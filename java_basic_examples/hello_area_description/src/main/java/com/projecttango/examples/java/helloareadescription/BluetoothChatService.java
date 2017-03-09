@@ -125,7 +125,8 @@ public class BluetoothChatService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
-            sendMessage(intent.getFloatArrayExtra("position"));
+//            sendMessage(intent.getFloatArrayExtra("position"));
+            sendMessage(intent.getFloatArrayExtra("rotation"));
         }
         return START_STICKY;
     }
@@ -159,7 +160,6 @@ public class BluetoothChatService extends Service {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    // Handler for mouse click on the send button.
     public void sendMessage(float[] message) {
         if (tx == null || message == null) {
             // Do nothing if there is no device or message to send.
@@ -173,13 +173,12 @@ public class BluetoothChatService extends Service {
         tx.setValue(buffer.array());
 
         if (gatt.writeCharacteristic(tx)) {
-            android.util.Log.d(TAG, "Sent: " + message[0] + ", " + message[1] + ", " + message[2]);
+            android.util.Log.d(TAG, "Sent!");
         }
         else {
             android.util.Log.d(TAG, "Couldn't write TX characteristic!");
         }
     }
-
 
     // Filtering by custom UUID is broken in Android 4.3 and 4.4, see:
     //   http://stackoverflow.com/questions/18019161/startlescan-with-128-bit-uuids-doesnt-work-on-native-android-ble-implementation?noredirect=1#comment27879874_18019161
