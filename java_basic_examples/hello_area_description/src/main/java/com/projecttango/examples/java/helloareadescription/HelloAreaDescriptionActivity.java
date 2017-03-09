@@ -267,9 +267,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                             mDestinationTranslation[0] = Float.valueOf(JSONlandmarks.getString(xName));
                             mDestinationTranslation[1] = Float.valueOf(JSONlandmarks.getString(yName));
                             mDestinationTranslation[2] = Float.valueOf(JSONlandmarks.getString(zName));
-                            Toast t1 = Toast.makeText(getApplicationContext(), "Destination: " + mDestinationTranslation[0] + ", " + mDestinationTranslation[1], Toast.LENGTH_SHORT);
-                            t1.show();
-
+                            mDestinationTextView.setText("X:" + mDestinationTranslation[0] + ", Y:" + mDestinationTranslation[1] + ", Z:" + mDestinationTranslation[2]);
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -300,12 +298,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         });
 
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("X:" + mDestinationTranslation[0] + ", Y:" + mDestinationTranslation[1] + ", Z:" + mDestinationTranslation[2]);
-
-        mDestinationTextView.setText(stringBuilder.toString());
-
         if(isLoadAdf) {
+            mSaveLandButton.setVisibility(View.GONE);
+            mLandmarkName.setVisibility(View.GONE);
+
             if (isLearningMode) {
                 // Disable save ADF button until Tango relocalizes to the current ADF.
                 mSaveAdfButton.setEnabled(false);
@@ -796,8 +792,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
             Toast t2 = Toast.makeText(getApplicationContext(),
                     "Reached Destination!", Toast.LENGTH_SHORT);
             t2.show();
-            
+
             mIsNavigatingMode = false;
+            mNextWaypointTextView.setText("");
+            mNextRotationTextView.setText("");
             return;
         }
 
