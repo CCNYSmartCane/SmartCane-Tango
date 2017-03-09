@@ -62,4 +62,9 @@ class Node {
 
         return this.x == node.x && this.y == node.y;
     }
+
+    @Override
+    public String toString(){
+        return String.valueOf(x) + ", " + String.valueOf(y);
+    }
 }

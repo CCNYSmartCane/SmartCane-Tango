@@ -20,7 +20,6 @@ import android.app.Activity;
 import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Path;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -56,6 +55,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.projecttango.examples.java.helloareadescription.Helper.getEulerAngleZ;
+import static com.projecttango.examples.java.helloareadescription.Helper.roundToNearestHalf;
 import static java.lang.String.valueOf;
 
 /**
@@ -74,12 +75,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private TextView mRelocalizationTextView;
     private TextView mCurrentLocationTextView;
     private TextView mZRotationTextView;
+    private TextView mNextRotationTextView;
+    private TextView mNextWaypointTextView;
     private TextView mDestinationTextView;
     private TextView mReachedDestinationTextView;
-    private TextView mFileContentView;
-    private TextView mStringx;
-    private TextView mStringy;
-    private TextView mStringz;
 
     private Button mSaveAdfButton;
     private Button mSaveLandButton;
@@ -121,6 +120,13 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private float minX = 0;
     private float maxY = 0;
     private float minY = 0;
+    private int offsetX = 0;
+    private int offsetY = 0;
+
+    private List<Node> squashedPath;
+    private double[] rotationsArray;
+    private boolean mIsNavigatingMode = false;
+    private int waypointIterator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -209,13 +215,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mDestinationTextView = (TextView) findViewById(R.id.destination_textview);
         mCurrentLocationTextView = (TextView) findViewById(R.id.current_location_textview);
         mZRotationTextView = (TextView) findViewById(R.id.z_rotation_textview);
+        mNextRotationTextView = (TextView) findViewById(R.id.next_rotation_textview);
+        mNextWaypointTextView = (TextView) findViewById(R.id.next_waypoint_textview);
         mReachedDestinationTextView = (TextView) findViewById(R.id.reached_destination_textview);
         mSaveLandButton = (Button) findViewById(R.id.land_button);
         mLandmarkName = (EditText) findViewById(R.id.landmarkName);
-        mFileContentView = (TextView) findViewById(R.id.fileString);
-        mStringx = (TextView) findViewById(R.id.xString);
-        mStringy = (TextView) findViewById(R.id.yString);
-        mStringz = (TextView) findViewById(R.id.zString);
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
         mChooseLandButton = (Button) findViewById(R.id.chooseLandButton);
 
@@ -306,7 +310,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 // Disable save ADF button until Tango relocalizes to the current ADF.
                 mSaveAdfButton.setEnabled(false);
             } else {
-                // Hide to save ADF button if leanring mode is off.
+                // Hide to save ADF button if learning mode is off.
                 mSaveAdfButton.setVisibility(View.GONE);
             }
 
@@ -386,8 +390,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
                             mIsRelocalized = true;
 
-                            Log.i("mIsRelocalized = ", valueOf(mIsRelocalized));
-
                             StringBuilder stringBuilder = new StringBuilder();
 
                             translation = pose.getTranslationAsFloats();
@@ -447,10 +449,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     serviceIntent.putExtra("position", translation);
                                     getApplicationContext().startService(serviceIntent);
 
-                                    mStringx.setText(String.valueOf(mDestinationTranslation[0]));
-                                    mStringy.setText(String.valueOf(mDestinationTranslation[1]));
-                                    mStringz.setText(String.valueOf(mDestinationTranslation[2]));
-
                                     float lowerBound_X = mDestinationTranslation[0] - 0.15f;
                                     float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
                                     float lowerBound_Z = mDestinationTranslation[2] - 0.15f;
@@ -462,6 +460,21 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mReachedDestinationTextView.setText(String.valueOf((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
                                             (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
                                             (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )));
+
+                                    if (mIsNavigatingMode) {
+                                        // TODO
+                                        Node nextWaypoint = squashedPath.get(waypointIterator);
+                                        if (roundToNearestHalf(translation[0]) == (nextWaypoint.getX()-offsetX)/2.0
+                                                && roundToNearestHalf(translation[1]) == (nextWaypoint.getY()-offsetY)/2.0) {
+
+                                            // Made it to the nextWaypoint
+                                            Toast t1 = Toast.makeText(getApplicationContext(),
+                                                    "Made it to the next waypoint!", Toast.LENGTH_SHORT);
+                                            t1.show();
+
+                                            updateWaypoint();
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -660,8 +673,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private void saveCoordinateMatrix(String fileName) {
         int xLength = (int)((maxX - minX)*2) + 1;
         int yLength = (int)((maxY - minY)*2) + 1;
-        int offsetX = Math.abs((int)(minX*2));
-        int offsetY = Math.abs((int)(minY*2));
+        offsetX = Math.abs((int)(minX*2));
+        offsetY = Math.abs((int)(minY*2));
 
         boolean[][] coordinateMatrix = new boolean[xLength][yLength];
 
@@ -692,9 +705,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void handlePathFinding() {
         // TODO: Need to remove and refactor duplicate readFile from current ADF selected
-        int offsetX = 0;
-        int offsetY = 0;
-
         ArrayList<String> fullUuidList;
         // Returns a list of ADFs with their UUIDs
         fullUuidList = mTango.listAreaDescriptions();
@@ -743,40 +753,77 @@ public class HelloAreaDescriptionActivity extends Activity implements
         Node end = new Node((int)(roundToNearestHalf(mDestinationTranslation[0])*2)+offsetX,
                 (int)(roundToNearestHalf(mDestinationTranslation[1])*2)+offsetY);
 
-        Log.i("PathFinder", "Start: " + start.getX() + ", " + start.getY());
-        Log.i("PathFinder", "End: " + end.getX() + ", " + end.getY());
-        Log.i("PathFinder", "Size: " + PathFinder.xLength + ", " + PathFinder.yLength);
-
-
         if(PathFinder.pathfind(start, end)) {
             Toast t1 = Toast.makeText(getApplicationContext(), "Path Found!", Toast.LENGTH_SHORT);
             t1.show();
 
             String path = "";
-            for(int i=PathFinder.path.size()-1; i>=0; i--) {
+            for(int i=0; i<PathFinder.squashedPath.size(); i++) {
                 // Remove offset and get real world coordinates
-                path += String.valueOf((PathFinder.path.get(i).getX()-offsetX)/2.0) + ", " + String.valueOf((PathFinder.path.get(i).getY()-offsetY)/2.0) + "\n";
+                path += String.valueOf((PathFinder.squashedPath.get(i).getX()-offsetX)/2.0) + ", " + String.valueOf((PathFinder.squashedPath.get(i).getY()-offsetY)/2.0) + "\n";
             }
 
             Toast t2 = Toast.makeText(getApplicationContext(), path, Toast.LENGTH_LONG);
             t2.show();
+
+            Log.i("PathFinder", "SquashedPath: " + path);
+
+            squashedPath = PathFinder.squashedPath;
+            getRotationsArray(squashedPath);
+            mIsNavigatingMode = true;
+            waypointIterator = 0;
+            updateWaypoint();
         }
     }
 
-    private double getEulerAngleZ(float[] quaternion)
-    {
-        float x = quaternion[0];
-        float y = quaternion[1];
-        float z = quaternion[2];
-        float w = quaternion[3];
+    private void getRotationsArray(List<Node> squashedPath) {
+        rotationsArray = new double[squashedPath.size()];
+        rotationsArray[0] = getEulerAngleZ(orientation);
+        for (int i=1; i<rotationsArray.length; i++) {
+            Node curr = squashedPath.get(i);
+            Node prev = squashedPath.get(i-1);
+            double yDiff = curr.getY() - prev.getY();
+            double xDiff = curr.getX() - prev.getX();
 
-        // yaw (z-axis rotation)
-        double t1 = 2.0 * (w*z+x*y);
-        double t2 = 1.0 - 2.0 * (y*y+z*z);
-        return Math.toDegrees(Math.atan2(t1, t2));
+            rotationsArray[i] = (Math.toDegrees(Math.atan2(yDiff, xDiff)) + 360) % 360;
+        }
     }
 
-    private float roundToNearestHalf(float f) {
-        return ((float)Math.round(f*2))/2;
+    private void updateWaypoint() {
+        ++waypointIterator;
+
+        if(waypointIterator == squashedPath.size()) {
+            Toast t2 = Toast.makeText(getApplicationContext(),
+                    "Reached Destination!", Toast.LENGTH_SHORT);
+            t2.show();
+            
+            mIsNavigatingMode = false;
+            return;
+        }
+
+        Node nextWaypoint = squashedPath.get(waypointIterator);
+
+        mNextWaypointTextView.setText(String.valueOf((nextWaypoint.getX()-offsetX)/2.0) +
+                ", " + String.valueOf((nextWaypoint.getY()-offsetY)/2.0));
+        mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
+
+        // Calculate the necessary rotation difference
+        double rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator-1];
+        if(Math.abs(rotationDiff) > 180) {
+            if (rotationDiff > 0) {
+                rotationDiff = rotationDiff - 360;
+            } else {
+                rotationDiff = 360 - rotationDiff;
+            }
+        }
+        Toast t;
+        if (rotationDiff > 0) {
+            // rotate counterclockwise or turn left
+            t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Counter-clockwise)", Toast.LENGTH_LONG);
+        } else {
+            // rotate clockwise or turn right
+            t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
+        }
+        t.show();
     }
 }
