@@ -737,9 +737,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
         for(int i=0; i<PathFinder.xLength; i++) {
             for(int j=0; j<PathFinder.yLength; j++) {
                 if (PathFinder.coordinateMatrix[i][j]) {
-                    s += i + ", " + j + "\n";
+                    s += "1,";
+                } else {
+                    s += "0,";
                 }
             }
+            s += "\n";
         }
         Log.i("Matrix", s);
 
