@@ -19,6 +19,7 @@ package com.projecttango.examples.java.helloareadescription;
 import com.google.atap.tangoservice.Tango;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -38,6 +39,8 @@ public class StartActivity extends Activity {
 
     // Permission request action.
     public static final int REQUEST_CODE_TANGO_PERMISSION = 0;
+    public static final int REQUEST_CODE_ENABLE_BT_PERMISSION = 1;
+
 
     // UI elements.
     private ToggleButton mLearningModeToggleButton;
@@ -113,6 +116,7 @@ public class StartActivity extends Activity {
         startActivity(startAdfListViewIntent);
     }
 
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // The result of the permission activity.
@@ -126,6 +130,14 @@ public class StartActivity extends Activity {
             // Make sure the request was successful
             if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this, R.string.arealearning_permission, Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }
+
+        if (requestCode == REQUEST_CODE_ENABLE_BT_PERMISSION) {
+            // Make sure the request was successful
+            if (resultCode == RESULT_CANCELED) {
+                Toast.makeText(this, R.string.bluetooth_permission, Toast.LENGTH_SHORT).show();
                 finish();
             }
         }

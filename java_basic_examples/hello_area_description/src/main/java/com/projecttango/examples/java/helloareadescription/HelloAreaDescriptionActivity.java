@@ -18,16 +18,17 @@ package com.projecttango.examples.java.helloareadescription;
 
 import android.app.FragmentManager;
 import android.app.ListActivity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -44,7 +45,6 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -55,8 +55,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
-import static android.R.id.list;
 import static java.lang.String.valueOf;
 
 /**
@@ -95,6 +96,11 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     private ArrayList<String> landmarkName = new ArrayList<String>();
     private ArrayList<String> adfName = new ArrayList<String>();
     private TangoPoseData currentPose;
+    private ArrayList<String> savedWaypointNames = new ArrayList<String>();
+
+    private boolean loadSavedNames = false;
+    private int loadCount = 0;
+
 
     private float[] arrayLands;
     private int countLands = 0;
@@ -122,68 +128,38 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     private float yPose = 0.0f;
     private float zPose = 0.0f;
 
-    private ArrayAdapter<String> adapter;
 
-    private ListView mListView;
-    // Waypoints recorded are stored in this ArrayList variable */
-   // private ArrayList<String> list = new ArrayList<String>();
+    private int chosenIndex = 0;
 
-    /** Declaring an ArrayAdapter to set items to ListView */
-
-   // private ArrayAdapter<String> adapter;
 
     private TextToSpeech mTts;
 
-    private BooleanVariable upClicked;
-    private BooleanVariable downClicked;
-    private BooleanVariable selectClicked;
 
-
+    private MyBroadcastReceiver myReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_area_learning);
         Intent intent = getIntent();
+
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+
+                if(loadSavedNames){
+                    fillSavedNamesList();
+                }
+
+            }
+
+        }, 0, 1000);
         mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
-       // mIsRelocalized = new BooleanVariable();
-       // mIsRelocalized.setBoo(false);
-//        mIsRelocalized.setListener(new BooleanVariable.ChangeListener() {
-//            @Override
-//            public void onChange() {
-//                if(mIsRelocalized.isBoo()){
-//                    loadSavedWaypoints();
-//
-//                }
-//            }
-//        });
 
-        upClicked = new BooleanVariable();
-        downClicked = new BooleanVariable();
-        selectClicked = new BooleanVariable();
 
-        upClicked.setListener(new BooleanVariable.ChangeListener() {
-            @Override
-            public void onChange() {
-
-            }
-        });
-
-        downClicked.setListener(new BooleanVariable.ChangeListener() {
-            @Override
-            public void onChange() {
-
-            }
-        });
-
-        selectClicked.setListener(new BooleanVariable.ChangeListener() {
-            @Override
-            public void onChange() {
-
-            }
-        });
 
 
     }
@@ -191,6 +167,10 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     @Override
     protected void onResume() {
         super.onResume();
+
+        myReceiver = new MyBroadcastReceiver();
+        final IntentFilter intentFilter = new IntentFilter("YourAction");
+        LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver, intentFilter);
 
         // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
         // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
@@ -248,7 +228,15 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                 Log.e(TAG, getString(R.string.tango_error), e);
             }
         }
+
+        if(myReceiver != null)
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
+        myReceiver = null;
     }
+
+
+
+
 
     /**
      * Sets Texts views to display statistics of Poses being received. This also sets the buttons
@@ -272,18 +260,9 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
         mChooseLandButton = (Button) findViewById(R.id.chooseLandButton);
         mSpeakButton = (Button) findViewById(R.id.speakButton);
-        mListView = (ListView) findViewById(list);
-
-//        adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,list);
-//        if(mListView != null){
-//            mListView.setAdapter(adapter);
-//        }
 
 
 
-
-        /** Defining the ArrayAdapter to set items to ListView */
-      //  adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, list);
 
         mSpeakButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -309,11 +288,6 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                 landmarkList.add(currentPose);
                 Log.i("landmarkList.len =  ", valueOf(landmarkList.size()));
 
-               // for (TangoPoseData t : landmarkList) {
-                //    Log.i("t = ", t.toString());
-               // }
-
-              //  Log.d("Size of landmarks")
 
                 Context context = getApplicationContext();
                 CharSequence text = "Landmark saved";
@@ -324,6 +298,8 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
                 String name = mLandmarkName.getText().toString();
                 landmarkName.add(name);
+
+
             }
         });
 
@@ -426,6 +402,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                             mIsRelocalized = true;
                             Log.i("mIsRelocalized = ", valueOf(mIsRelocalized));
 
+
                             StringBuilder stringBuilder = new StringBuilder();
 
                             translation = pose.getTranslationAsFloats();
@@ -434,12 +411,15 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
                             // Load saved landmarks from file corresponding to ADF name
 
-                            //loadSavedWaypoints();
 
                             ArrayList<String> fullUuidList;
                             // Returns a list of ADFs with their UUIDs
                             fullUuidList = mTango.listAreaDescriptions();
                             if(fullUuidList.size() > 0) {
+
+
+                                loadSavedNames = true;
+                                loadCount++;
 
                                 String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
 
@@ -460,53 +440,17 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                 String yName = yNameBuilder.toString();
                                 String zName = zNameBuilder.toString();
 
-                                // Create a json array from the string read from file
-
-                                JSONArray storedJsonArray = null;
                                 try {
-                                    storedJsonArray = new JSONArray(landmarksStored);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-
-                                // First object in json array is the pose for each landmark in the corresponding
-                                // position
-
-                                // Get value of pose in x,y,z of the landmark chosen to navigate to
-
-                                try {
-                                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
+                                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
                                     xPose = Float.valueOf(JSONlandmarks.getString(xName));
                                     yPose = Float.valueOf(JSONlandmarks.getString(yName));
                                     zPose = Float.valueOf(JSONlandmarks.getString(zName));
 
-                                }catch (JSONException e){
-                                    e.printStackTrace();
-                                }
 
-//                                try {
-//                                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
-//                                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
-//                                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
-//                                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
-//
-//
-//                                } catch (JSONException e) {
-//                                    e.printStackTrace();
-//                                }
-
-                                try {
-                                    JSONObject JSONstoredNames = storedJsonArray.getJSONObject(1);
-                                    for (int i=0; i<JSONstoredNames.length(); i++){
-                                        //String name = JSONstoredNames.getString(Integer.toString(i));
-                                        //list.add(name);
-                                       // adapter.notifyDataSetChanged();
-                                    }
                                 } catch (JSONException e) {
                                     e.printStackTrace();
                                 }
                             }
-
 
                         } else {
                             mIsRelocalized = false;
@@ -540,6 +484,11 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                     mFileContentView.setText(landmarksStored);
 
                                     mCurrentLocationTextView.setText(mPositionString);
+
+                                    Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
+                                    serviceIntent.putExtra("position", translation);
+                                    getApplicationContext().startService(serviceIntent);
+
                                     mStringx.setText(String.valueOf(xPose));
                                     mStringy.setText(String.valueOf(yPose));
                                     mStringz.setText(String.valueOf(zPose));
@@ -593,16 +542,89 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         });
     }
 
+    private void processArduinoValues(String arduinoSent){
+
+        Log.d("select", "processCalled");
+
+        Log.d("arduinosent",arduinoSent);
+
+        if(arduinoSent.equals("1")){
+            // Select is clicked
+            Log.d("selectclick","1 clicked");
+            selectButtonClicked();
+        }
+        if(arduinoSent.equals("2")){
+            // Up is clicked
+            upButtonClicked();
+        }
+        if(arduinoSent.equals("3")){
+            // Down is clicked
+            downButtonClicked();
+        }
+    }
+
+
+
+    private void fillSavedNamesList(){
+        try {
+            Log.d("Fill","fill saved list ");
+            JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+            for(int i=0; i<JSONlandmarks.length(); i++){
+                String tempName = JSONlandmarks.getString(String.valueOf(i));
+                savedWaypointNames.add(tempName);
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void selectButtonClicked(){
+        if(savedWaypointNames.size() != 0) {
+            Log.d("Select again", "Select clicked after");
+            chosenLandmark = savedWaypointNames.get(chosenIndex);
+            String speakToUser = chosenLandmark +" " + "Selected";
+            ConvertTextToSpeech(speakToUser);
+
+
+        }
+        if(savedWaypointNames.size() == 0){
+            Log.d("select","no waypoints");
+        }
+    }
+
+    private void upButtonClicked(){
+        if(savedWaypointNames.size() != 0) {
+            if (chosenIndex == 0) {
+                chosenIndex = savedWaypointNames.size() - 1;
+            } else {
+                chosenIndex--;
+            }
+
+            String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
+            ConvertTextToSpeech(speakToUser);
+        }
+    }
+
+    private void downButtonClicked(){
+        if(savedWaypointNames.size() != 0) {
+            if (chosenIndex == savedWaypointNames.size() - 1) {
+                chosenIndex = 0;
+            } else {
+                chosenIndex++;
+            }
+            String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
+            ConvertTextToSpeech(speakToUser);
+        }
+    }
+
+
     private String readFile(String adfId){
 
         StringBuilder finalString = new StringBuilder();
 
         try {
 
-           // StringBuilder fileName = new StringBuilder();
-           // fileName.append(adfId + ".txt");
-
-           // String name = fileName.toString();
 
             FileInputStream inStream = this.openFileInput(adfId);
             InputStreamReader inputStreamReader = new InputStreamReader(inStream);
@@ -629,17 +651,17 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         return landmarkString;
     }
 
-    private void saveLandmarks(String id){
+    private void saveLandmarks(String id) {
 
         // Save landmark coords (x,y,z) + waypoint name
 
-        Log.d("Checking","save Landmarks to file is called");
+        Log.d("Checking", "save Landmarks to file is called");
 
         int size = landmarkList.size();
 
         JSONObject jsonObj = new JSONObject();
 
-        for(int i=0; i<size; i++){
+        for (int i = 0; i < size; i++) {
             StringBuilder xNameBuilder = new StringBuilder();
             StringBuilder yNameBuilder = new StringBuilder();
             StringBuilder zNameBuilder = new StringBuilder();
@@ -657,57 +679,40 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
             String yPose = Float.toString(translationStored[1]);
             String zPose = Float.toString(translationStored[2]);
 
+
             try {
                 jsonObj.put(xName,xPose);
                 jsonObj.put(yName,yPose);
                 jsonObj.put(zName,zPose);
+                jsonObj.put(String.valueOf(i),landmarkName.get(i));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+
+
+
         }
 
-        // Save just the landmark names
 
-        JSONObject jsonObjectNames = new JSONObject();
 
-        for(int i=0; i<size; i++){
-           // StringBuilder landNameBuilder = new StringBuilder();
-            //landNameBuilder.append("landmark_" + i);
-            //String landName = landNameBuilder.toString();
+            // Create a file in the Internal Storage
+            String fileName = id; //name file with uuid
+            String content = jsonObj.toString();
+            Log.d("content", content);
+            Log.d("filename", fileName);
 
-            // Save as a key value pair -> {i:name}
+            FileOutputStream outputStream = null;
             try {
-                jsonObjectNames.put(Integer.toString(i), landmarkName.get(i));
-            } catch (JSONException e) {
+                outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
+                outputStream.write(content.getBytes());
+                outputStream.close();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
 
-        String fileName = id; //name file with uuid
-        //String content = jsonObj.toString();
-
-        JSONArray jsonAr = new JSONArray();
-        jsonAr.put(jsonObj);
-        jsonAr.put(jsonObjectNames);
-
-        // Store Json array with 2 json objects: the landmark names + the 3 coords for each landmark
-        // Create a file in the Internal Storage
-
-        String content = jsonAr.toString();
-        Log.d("content", content);
-        Log.d("filename", fileName);
-
-        FileOutputStream outputStream = null;
-        try {
-            outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
-            outputStream.write(content.getBytes());
-            outputStream.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        Log.d("checking ", "success stored landmarks");
+            Log.d("checking ", "success stored landmarks");
     }
+
 
     /**
      * Implements SetAdfNameDialog.CallbackListener.
@@ -785,57 +790,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         setAdfNameDialog.show(manager, "ADFNameDialog");
     }
 
-//    private void loadSavedWaypoints(){
-//
-//        // Load saved landmarks
-//
-//        ArrayList<String> fullUuidList;
-//        // Returns a list of ADFs with their UUIDs
-//        fullUuidList = mTango.listAreaDescriptions();
-//        if(fullUuidList.size() > 0) {
-//
-//            String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
-//
-//            landmarksStored = "empty file";
-//            landmarksStored = readFile(adfFileName);
-//
-//            Log.d("landmarksStored", landmarksStored);
-//
-//            StringBuilder xNameBuilder = new StringBuilder();
-//            StringBuilder yNameBuilder = new StringBuilder();
-//            StringBuilder zNameBuilder = new StringBuilder();
-//
-//            xNameBuilder.append(chosenLandmark + "_x");
-//            yNameBuilder.append(chosenLandmark + "_y");
-//            zNameBuilder.append(chosenLandmark + "_z");
-//
-//            String xName = xNameBuilder.toString();
-//            String yName = yNameBuilder.toString();
-//            String zName = zNameBuilder.toString();
-//
-//
-//            JSONArray storedJsonArray = null;
-//            try {
-//                storedJsonArray = new JSONArray(landmarksStored);
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//
-//            try {
-//                if (storedJsonArray != null) {
-//                    JSONObject JSONlandmarks = storedJsonArray.getJSONObject(0);
-//                    xPose = Float.valueOf(JSONlandmarks.getString(xName));
-//                    yPose = Float.valueOf(JSONlandmarks.getString(yName));
-//                    zPose = Float.valueOf(JSONlandmarks.getString(zName));
-//                }
-//
-//
-//            } catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//
-//    }
+
     @Override
     public void onInit(int status) {
         if(status == TextToSpeech.SUCCESS){
@@ -858,5 +813,25 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         }
 
     }
+
+
+
+    public class MyBroadcastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            Bundle b = intent.getExtras();
+            if(b != null) {
+                String arduinoValue = b.getString("valueName");
+                Log.d("click value broadcast: ", arduinoValue);
+                processArduinoValues(arduinoValue);
+            }
+
+
+        }
+    }
+
+
 
 }
