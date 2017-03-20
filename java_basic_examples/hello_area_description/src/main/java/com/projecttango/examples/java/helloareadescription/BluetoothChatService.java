@@ -13,12 +13,11 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.view.View;
-
+import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -34,13 +33,16 @@ public class BluetoothChatService extends Service {
     public static UUID RX_UUID = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
     // UUID for the BTLE client characteristic which is necessary for notifications.
     public static UUID CLIENT_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+    final static String MY_ACTION = "MY_ACTION";
 
     // BTLE state
     private BluetoothAdapter adapter;
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic tx;
     private BluetoothGattCharacteristic rx;
-    
+
+    private String clickValue;
+
     
     // Main BTLE device callback where much of the logic occurs.
     private BluetoothGattCallback callback = new BluetoothGattCallback() {
@@ -101,8 +103,22 @@ public class BluetoothChatService extends Service {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
             android.util.Log.d(TAG, "Received: " + characteristic.getStringValue(0));
+
+            clickValue = characteristic.getStringValue(0);
+            Log.d("clickValue: ",clickValue);
+
+            Intent intent = new Intent("YourAction");
+            Bundle bundle = new Bundle();
+            bundle.putString("valueName", clickValue);
+
+            intent.putExtras(bundle);
+            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+
+
         }
     };
+
+
 
     // BTLE device scanning callback.
     private LeScanCallback scanCallback = new LeScanCallback() {
