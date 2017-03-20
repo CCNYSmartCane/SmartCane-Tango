@@ -259,7 +259,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
      * objects are initialized since we use them for the SDK related stuff like version number
      * etc.
      */
-    private void setupTextViewsAndButtons(Tango tango, boolean isLearningMode, final boolean isLoadAdf) {
+    private void setupTextViewsAndButtons(Tango tango, boolean isLearningMode, boolean isLoadAdf) {
         mSaveAdfButton = (Button) findViewById(R.id.save_adf_button);
         mUuidTextView = (TextView) findViewById(R.id.adf_uuid_textview);
         mRelocalizationTextView = (TextView) findViewById(R.id.relocalization_textview);
@@ -289,7 +289,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                loadWaypoint(isLoadAdf);
+                loadWaypoint(mIsConstantSpaceRelocalize);
             }
         });
 
@@ -392,11 +392,13 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
                     // Check for Device wrt ADF pose, Device wrt Start of Service pose, Start of
                     // Service wrt ADF pose (This pose determines if the device is relocalized or
-                    // not).
+                    // not)
+
                     if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                             && pose.targetFrame == TangoPoseData
                             .COORDINATE_FRAME_DEVICE) {
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
+
                             mIsRelocalized = true;
 
                             StringBuilder stringBuilder = new StringBuilder();
@@ -448,7 +450,6 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                         getString(R.string.not_localized));
 
                                 if (mIsRelocalized) {
-
 //                                    mFileContentView.setText(landmarksStored);
 
                                     mCurrentLocationTextView.setText(mPositionString);
@@ -477,9 +478,6 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
                                                 && roundToNearestHalf(translation[1]) == (nextWaypoint.getY()-offsetY)/2.0) {
 
                                             // Made it to the nextWaypoint
-                                            Toast t1 = Toast.makeText(getApplicationContext(),
-                                                    "Made it to the next waypoint!", Toast.LENGTH_SHORT);
-                                            t1.show();
 
                                             updateWaypoint();
                                         }
@@ -969,7 +967,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         }
     }
 
-    public void loadWaypoint(final boolean isLoadAdf) {
+    public void loadWaypoint(boolean isLoadAdf) {
         if (isLoadAdf) {
             chosenLandmark = mDestLandmark.getText().toString();
             // Load saved landmarks and
