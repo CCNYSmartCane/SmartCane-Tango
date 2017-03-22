@@ -32,7 +32,7 @@ class PathFinder {
             if (current.equals(goal)) {
                 totalPath = reconstructPath(current);
                 if(totalPath.size() > 2) {
-                    squashedPath = squashPath(totalPath);
+                    squashedPath = DouglasPeucker(totalPath, 2.0); // Since this is in 0.5 meters, then 2.0 -> 1.0 meter
                 } else {
                     squashedPath = totalPath;
                 }
@@ -142,6 +142,49 @@ class PathFinder {
             }
         }
         return squashedPath;
+    }
+
+    private static List<Node> DouglasPeucker(List<Node> path, double epsilon) {
+        // Find the point that is max distance from line
+        double dmax = 0;
+        int index = 0;
+        int last = path.size() - 1;
+
+        for (int i = 1; i < last; i++) {
+            double d = perpendicularDistance(path.get(i), path.get(0), path.get(last));
+            if (d > dmax) {
+                index = i;
+                dmax = d;
+            }
+        }
+        // If dmax is greater than the threshold, recursively call both sides
+        List<Node> results = new ArrayList<Node>();
+        if (dmax > epsilon) {
+            List<Node> results1 = DouglasPeucker(path.subList(0, index), epsilon);
+            List<Node> results2 = DouglasPeucker(path.subList(index, last), epsilon);
+            results.addAll(results1);
+            // Remove the middle otherwise there would be duplicate instances
+            results.remove(results.size() - 1);
+            results.addAll(results2);
+        } else {
+            results.add(path.get(0));
+            results.add(path.get(last));
+        }
+        return results;
+    }
+
+    private static double perpendicularDistance(Node p, Node lineStart, Node lineEnd) {
+        int y2 = lineEnd.getY();
+        int y1 = lineStart.getY();
+        int x2 = lineEnd.getX();
+        int x1 = lineStart.getX();
+
+        return Math.abs((y2 - y1) * p.getX() - (x2 - x1) * p.getY() + x2 * y1 - y2 * x1)
+                / euclideanDistance(lineStart, lineEnd);
+    }
+
+    private static double euclideanDistance(Node current, Node n) {
+        return Math.sqrt(Math.pow(current.getX() - n.getX(), 2) + Math.pow(current.getY() - n.getY(), 2));
     }
 }
 
