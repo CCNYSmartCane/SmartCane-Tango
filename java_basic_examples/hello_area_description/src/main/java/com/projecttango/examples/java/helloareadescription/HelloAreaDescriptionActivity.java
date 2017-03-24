@@ -530,6 +530,9 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
             // Down is clicked
             downButtonClicked();
         }
+        if(arduinoSent.equals("Rotation finished")) {
+            ConvertTextToSpeech(arduinoSent + ", walk forward");
+        }
     }
 
 
@@ -910,9 +913,11 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         if (rotationDiff > 0) {
             // rotate counterclockwise or turn left
             t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Counter-clockwise)", Toast.LENGTH_LONG);
+            ConvertTextToSpeech("Rotate left by " + rotationDiff + " degrees");
         } else {
             // rotate clockwise or turn right
             t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
+            ConvertTextToSpeech("Rotate right " + Math.abs(rotationDiff) + "degrees");
         }
         t.show();
 
