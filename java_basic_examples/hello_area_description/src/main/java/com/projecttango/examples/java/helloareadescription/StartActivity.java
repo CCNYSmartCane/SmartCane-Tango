@@ -64,6 +64,9 @@ public class StartActivity extends Activity {
 
         startActivityForResult(
                 Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE), 0);
+
+        Intent bluetoothService = new Intent(this, BluetoothChatService.class);
+        startService(bluetoothService);
     }
 
     /**

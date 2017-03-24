@@ -178,9 +178,6 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
-
-        Intent bluetoothService = new Intent(this, BluetoothChatService.class);
-        startService(bluetoothService);
     }
 
     @Override

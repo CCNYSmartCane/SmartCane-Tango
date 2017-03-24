@@ -151,6 +151,8 @@ public class BluetoothChatService extends Service {
     @Override
     public void onCreate() {
         adapter = BluetoothAdapter.getDefaultAdapter();
+        // TODO Get permission for bluetooth
+
         // Scan for all BTLE devices.
         // The first one with the UART service will be chosen--see the code in the scanCallback.
         android.util.Log.d(TAG, "Scanning for devices...");
