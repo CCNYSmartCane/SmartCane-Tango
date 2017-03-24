@@ -16,15 +16,14 @@
 
 package com.projecttango.examples.java.helloareadescription;
 
-import com.google.atap.tangoservice.Tango;
-
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 import android.widget.ToggleButton;
+
+import com.google.atap.tangoservice.Tango;
 
 /**
  * Start Activity for Area Description example. Gives the ability to choose a particular
@@ -116,6 +115,8 @@ public class StartActivity extends Activity {
      */
     private void startAdfListView() {
         Intent startAdfListViewIntent = new Intent(this, AdfUuidListViewActivity.class);
+        startAdfListViewIntent.putExtra(USE_AREA_LEARNING,mIsUseAreaLearning);
+        startAdfListViewIntent.putExtra(LOAD_ADF,mIsLoadAdf);
         startActivity(startAdfListViewIntent);
     }
 

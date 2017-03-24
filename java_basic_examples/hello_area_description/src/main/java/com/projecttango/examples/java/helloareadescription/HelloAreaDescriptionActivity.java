@@ -16,8 +16,8 @@
 
 package com.projecttango.examples.java.helloareadescription;
 
+import android.app.Activity;
 import android.app.FragmentManager;
-import android.app.ListActivity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -27,8 +27,10 @@ import android.speech.tts.TextToSpeech;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -70,7 +72,7 @@ import static java.lang.String.valueOf;
  * Main Activity class for the Area Description example. Handles the connection to the Tango service
  * and propagation of Tango pose data to Layout view.
  */
-public class HelloAreaDescriptionActivity extends ListActivity implements
+public class HelloAreaDescriptionActivity extends Activity implements
         SetAdfNameDialog.CallbackListener,
         SaveAdfTask.SaveAdfListener, TextToSpeech.OnInitListener {
 
@@ -92,7 +94,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
     private EditText mLandmarkName;
     private Button mChooseLandButton;
     private EditText mDestLandmark;
-    private Button mSpeakButton;
+
 
     private float[] translation;
     private float[] orientation;
@@ -151,11 +153,16 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
     private int chosenIndex = 0;
 
-
     private TextToSpeech mTts;
 
-
     private MyBroadcastReceiver myReceiver;
+    private String selectedUUID;
+
+    private ListView listView;
+    private Boolean filledSavedWaypoints = false;
+
+    private TextView waypointView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -169,15 +176,34 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
             public void run() {
 
                 if(loadSavedNames){
-                    fillSavedNamesList();
+                    Log.d("fill","here");
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // TODO Auto-generated method stub
+                            fillSavedNamesList();
+                            Log.d("fill", "saved is called");
+
+                        }
+                    });
+
                 }
 
             }
 
         }, 0, 1000);
-        mIsLearningMode = intent.getBooleanExtra(StartActivity.USE_AREA_LEARNING, false);
-        mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
+        mIsLearningMode = intent.getBooleanExtra(AdfUuidListViewActivity.USE_AREA_LEARNING, false);
+        mIsConstantSpaceRelocalize = intent.getBooleanExtra(AdfUuidListViewActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
+
+        selectedUUID = getIntent().getExtras().getString("uuidName");
+        String toastMessage = "Selected map: " + selectedUUID + "loaded";
+        Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
+
+        listView = (ListView) findViewById(R.id.list);
+
+
+
     }
 
     @Override
@@ -270,18 +296,7 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         mLandmarkName = (EditText) findViewById(R.id.landmarkName);
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
         mChooseLandButton = (Button) findViewById(R.id.chooseLandButton);
-        mSpeakButton = (Button) findViewById(R.id.speakButton);
-
-
-
-
-        mSpeakButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ConvertTextToSpeech("You are being navigated to");
-            }
-        });
-
+        waypointView = (TextView) findViewById(R.id.waypointView);
 
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -353,8 +368,14 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
             fullUuidList = tango.listAreaDescriptions();
             // Load the latest ADF if ADFs are found.
             if (fullUuidList.size() > 0) {
-                config.putString(TangoConfig.KEY_STRING_AREADESCRIPTION,
-                        fullUuidList.get(fullUuidList.size() - 1));
+                if(selectedUUID == null) {
+                    config.putString(TangoConfig.KEY_STRING_AREADESCRIPTION,
+                            fullUuidList.get(fullUuidList.size() - 1));
+                }
+                else{
+                    config.putString(TangoConfig.KEY_STRING_AREADESCRIPTION,
+                            selectedUUID);
+                }
             }
         }
         return config;
@@ -535,17 +556,30 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
 
 
     private void fillSavedNamesList(){
-        try {
-            Log.d("Fill","fill saved list ");
-            JSONObject JSONlandmarks = new JSONObject(landmarksStored);
-            for(int i=0; i<JSONlandmarks.length(); i++){
-                String tempName = JSONlandmarks.getString(String.valueOf(i));
-                savedWaypointNames.add(tempName);
-            }
+        if(!filledSavedWaypoints) {
+            try {
+                Log.d("Fill", "fill saved list ");
+                JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+                String temp = " ";
+                waypointView.setText(String.valueOf(JSONlandmarks));
+                for (int i = 0; i < JSONlandmarks.length(); i++) {
+                    String tempName = JSONlandmarks.getString(String.valueOf(i));
+                    Log.d("waypoint",tempName);
+                    temp = temp + " " + tempName;
+                    Log.d("temp",temp);
+                    savedWaypointNames.add(tempName);
+                }
+                waypointView.setText(temp);
+                filledSavedWaypoints = true;
+                ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                        android.R.layout.simple_list_item_1, android.R.id.text1, savedWaypointNames);
+                listView.setAdapter(adapter);
 
-        } catch (JSONException e) {
-            e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
+
     }
 
     private void selectButtonClicked(){
@@ -958,13 +992,16 @@ public class HelloAreaDescriptionActivity extends ListActivity implements
         @Override
         public void onReceive(Context context, Intent intent) {
 
+            Log.d("broadcast", "broadcast started");
+
             Bundle b = intent.getExtras();
             if(b != null) {
-                String arduinoValue = b.getString("valueName");
-                Log.d("click value broadcast: ", arduinoValue);
-                processArduinoValues(arduinoValue);
+                if(b.getString("valueName") != null) {
+                    String arduinoValue = b.getString("valueName");
+                    Log.d("click value broadcast: ", arduinoValue);
+                    processArduinoValues(arduinoValue);
+                }
             }
-
 
         }
     }

@@ -16,15 +16,12 @@
 
 package com.projecttango.examples.java.helloareadescription;
 
-import com.google.atap.tangoservice.Tango;
-import com.google.atap.tangoservice.TangoAreaDescriptionMetaData;
-import com.google.atap.tangoservice.TangoErrorException;
-
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.MenuItem;
@@ -32,6 +29,10 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
+
+import com.google.atap.tangoservice.Tango;
+import com.google.atap.tangoservice.TangoAreaDescriptionMetaData;
+import com.google.atap.tangoservice.TangoErrorException;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -43,6 +44,12 @@ import java.util.ArrayList;
  */
 public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialog.CallbackListener {
 
+    public static final String USE_AREA_LEARNING =
+            "com.projecttango.examples.java.helloareadescription.usearealearning";
+    public static final String LOAD_ADF =
+            "com.projecttango.examples.java.helloareadescription.loadadf";
+
+
     private ListView mTangoSpaceAdfListView, mAppSpaceAdfListView;
     private AdfUuidArrayAdapter mTangoSpaceAdfListAdapter, mAppSpaceAdfListAdapter;
     private ArrayList<AdfData> mTangoSpaceAdfDataList, mAppSpaceAdfDataList;
@@ -51,6 +58,8 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
     private Tango mTango;
     private volatile boolean mIsTangoReady = false;
 
+    private Boolean mIsUseAreaLearning = false;
+    private Boolean mIsLoadAdf = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,11 +70,25 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         mAppSpaceMenuStrings = getResources().getStringArray(
                 R.array.set_dialog_menu_items_app_space);
 
+        Intent intent = getIntent();
+
         // Get API ADF ListView Ready
         mTangoSpaceAdfListView = (ListView) findViewById(R.id.uuid_list_view_tango_space);
         mTangoSpaceAdfDataList = new ArrayList<AdfData>();
         mTangoSpaceAdfListAdapter = new AdfUuidArrayAdapter(this, mTangoSpaceAdfDataList);
         mTangoSpaceAdfListView.setAdapter(mTangoSpaceAdfListAdapter);
+//        mTangoSpaceAdfListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+//            @Override
+//            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+//                // ListView Clicked item index
+//                int itemPosition = i;
+//
+//                // ListView Clicked item value
+//                String  itemValue = (String) mTangoSpaceAdfListView.getItemAtPosition(itemPosition);
+//
+//                Log.d("itemValue",itemValue);
+//            }
+//        });
         registerForContextMenu(mTangoSpaceAdfListView);
 
         // Get App Space ADF List View Ready
@@ -75,6 +98,9 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         mAppSpaceAdfListAdapter = new AdfUuidArrayAdapter(this, mAppSpaceAdfDataList);
         mAppSpaceAdfListView.setAdapter(mAppSpaceAdfListAdapter);
         registerForContextMenu(mAppSpaceAdfListView);
+
+        mIsUseAreaLearning = intent.getBooleanExtra(USE_AREA_LEARNING, false);
+        mIsLoadAdf = intent.getBooleanExtra(LOAD_ADF, false);
     }
 
     @Override
@@ -122,6 +148,7 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
             menu.add(mTangoSpaceMenuStrings[0]);
             menu.add(mTangoSpaceMenuStrings[1]);
             menu.add(mTangoSpaceMenuStrings[2]);
+            menu.add(mTangoSpaceMenuStrings[3]);
         }
 
         if (v.getId() == R.id.uuid_list_view_application_space) {
@@ -142,6 +169,8 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         String itemName = (String) item.getTitle();
         int index = info.position;
 
+        Log.d("index",mTangoSpaceAdfDataList.get(index).uuid);
+
         // Rename the ADF from API storage
         if (itemName.equals(mTangoSpaceMenuStrings[0])) {
             // Delete the ADF from Tango space and update the Tango ADF Listview.
@@ -158,6 +187,9 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         } else if (itemName.equals(mAppSpaceMenuStrings[1])) {
             // Import an ADF from app space to Tango space.
             importAdf(mAppSpaceAdfDataList.get(index).uuid);
+        } else if (itemName.equals(mTangoSpaceMenuStrings[3])) {
+            //Select as ADF to be localized in
+            selectAdf(mTangoSpaceAdfDataList.get(index).uuid);
         }
 
         updateList();
@@ -236,6 +268,23 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
     private void deleteAdfFromAppSpace(String uuid) {
         File file = new File(mAppSpaceAdfFolder + File.separator + uuid);
         file.delete();
+    }
+
+    private void selectAdf(String uuid){
+        // Send value of uuid to helloareadescription
+
+//        Intent intent = new Intent("UUID Action");
+//        Bundle bundle = new Bundle();
+//        bundle.putString("uuidName", uuid);
+//
+//        intent.putExtras(bundle);
+//        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+
+        Intent intent = new Intent(AdfUuidListViewActivity.this, HelloAreaDescriptionActivity.class);
+        intent.putExtra("uuidName",uuid);
+        intent.putExtra(USE_AREA_LEARNING, mIsUseAreaLearning);
+        intent.putExtra(LOAD_ADF, mIsLoadAdf);
+        startActivity(intent);
     }
 
     /*
