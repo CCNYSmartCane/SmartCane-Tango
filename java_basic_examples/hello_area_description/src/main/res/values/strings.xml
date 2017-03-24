@@ -70,6 +70,7 @@
         <item>Rename</item>
         <item>Delete from API space</item>
         <item>Export to App space</item>
+        <item>Select Map</item>
     </string-array>
     <string-array name="set_dialog_menu_items_app_space">
         <item>Delete from  App space</item>

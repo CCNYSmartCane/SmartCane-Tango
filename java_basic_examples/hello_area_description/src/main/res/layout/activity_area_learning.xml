@@ -205,24 +205,34 @@
             android:text = "Go"
             android:id = "@+id/chooseLandButton"/>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/waypointView"
+            android:text="Waypoints">
+        </TextView>
+
+
+        <ListView
+            android:id="@+id/list"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+        </ListView>
+
     </LinearLayout>
+
+
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Speak"
-            android:id="@+id/speakButton"/>
 
-        <ListView
-            android:id="@android:id/list"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
+
+
+
+
 
     </LinearLayout>
 
