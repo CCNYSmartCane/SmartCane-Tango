@@ -168,28 +168,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
         setContentView(R.layout.activity_area_learning);
         Intent intent = getIntent();
 
-//        Timer timer = new Timer();
-//        timer.schedule(new TimerTask() {
-//            @Override
-//            public void run() {
-//
-//                if(loadSavedNames){
-//                    Log.d("fill","here");
-//                    runOnUiThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            // TODO Auto-generated method stub
-//                            fillSavedNamesList();
-//                            Log.d("fill", "saved is called");
-//
-//                        }
-//                    });
-//
-//                }
-//
-//            }
-//
-//        }, 0, 1000);
         mIsLearningMode = intent.getBooleanExtra(AdfUuidListViewActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(AdfUuidListViewActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
@@ -557,7 +535,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void fillSavedNamesList(){
-       // if(!filledSavedWaypoints) {
             try {
                 Log.d("Fill", "fill saved list ");
                 JSONObject JSONlandmarks = new JSONObject(landmarksStored);
@@ -569,7 +546,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
                     Log.d("savedwaypoints",tempName);
                 }
                 waypointView.setText(temp);
-                //filledSavedWaypoints = true;
                 ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                         android.R.layout.simple_list_item_1, android.R.id.text1, savedWaypointNames);
                 listView.setAdapter(adapter);
@@ -588,12 +564,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
             if (mRotationDiff > 0) {
                 // rotate counterclockwise or turn left
                 t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(mRotationDiff) + "(Counter-clockwise)", Toast.LENGTH_LONG);
-                ConvertTextToSpeech("Rotate left " + mRotationDiff + "degrees");
+                ConvertTextToSpeech("Rotate left " + (int)mRotationDiff + "degrees");
 
             } else {
                 // rotate clockwise or turn right
                 t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(mRotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
-                ConvertTextToSpeech("Rotate right " + Math.abs(mRotationDiff) + "degrees");
+                ConvertTextToSpeech("Rotate right " + (int)Math.abs(mRotationDiff) + "degrees");
             }
             t.show();
         } else {
