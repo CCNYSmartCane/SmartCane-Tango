@@ -61,8 +61,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import static com.projecttango.examples.java.helloareadescription.Helper.getEulerAngleZ;
 import static com.projecttango.examples.java.helloareadescription.Helper.roundToNearestHalf;
@@ -94,7 +92,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private EditText mLandmarkName;
     private Button mChooseLandButton;
     private EditText mDestLandmark;
-
 
     private float[] translation;
     private float[] orientation;
@@ -162,6 +159,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private Boolean filledSavedWaypoints = false;
 
     private TextView waypointView;
+    private float mRotationDiff;
 
 
     @Override
@@ -170,28 +168,28 @@ public class HelloAreaDescriptionActivity extends Activity implements
         setContentView(R.layout.activity_area_learning);
         Intent intent = getIntent();
 
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-
-                if(loadSavedNames){
-                    Log.d("fill","here");
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            // TODO Auto-generated method stub
-                            fillSavedNamesList();
-                            Log.d("fill", "saved is called");
-
-                        }
-                    });
-
-                }
-
-            }
-
-        }, 0, 1000);
+//        Timer timer = new Timer();
+//        timer.schedule(new TimerTask() {
+//            @Override
+//            public void run() {
+//
+//                if(loadSavedNames){
+//                    Log.d("fill","here");
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            // TODO Auto-generated method stub
+//                            fillSavedNamesList();
+//                            Log.d("fill", "saved is called");
+//
+//                        }
+//                    });
+//
+//                }
+//
+//            }
+//
+//        }, 0, 1000);
         mIsLearningMode = intent.getBooleanExtra(AdfUuidListViewActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(AdfUuidListViewActivity.LOAD_ADF, false);
         mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
@@ -230,6 +228,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                 mTango, mIsLearningMode, mIsConstantSpaceRelocalize);
                         mTango.connect(mConfig);
                         startupTango();
+
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.tango_out_of_date_exception), e);
                     } catch (TangoErrorException e) {
@@ -342,8 +341,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 mUuidTextView.setText(R.string.no_uuid);
             } else {
                 mUuidTextView.setText(getString(R.string.number_of_adfs) + fullUuidList.size()
-                        + getString(R.string.latest_adf_is)
-                        + fullUuidList.get(fullUuidList.size() - 1));
+                        + "Selected ADF is "
+                        + selectedUUID);
+
+                landmarksStored = "empty file";
+                landmarksStored = readFile(selectedUUID);
+                fillSavedNamesList();
             }
         }
     }
@@ -490,13 +493,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                             (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )));
 
                                     if (mIsNavigatingMode) {
-                                        // TODO
                                         Node nextWaypoint = squashedPath.get(waypointIterator);
                                         if (roundToNearestHalf(translation[0]) == (nextWaypoint.getX()-offsetX)/2.0
                                                 && roundToNearestHalf(translation[1]) == (nextWaypoint.getY()-offsetY)/2.0) {
 
                                             // Made it to the nextWaypoint
-
                                             updateWaypoint();
                                         }
                                     }
@@ -556,7 +557,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void fillSavedNamesList(){
-        if(!filledSavedWaypoints) {
+       // if(!filledSavedWaypoints) {
             try {
                 Log.d("Fill", "fill saved list ");
                 JSONObject JSONlandmarks = new JSONObject(landmarksStored);
@@ -564,13 +565,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 waypointView.setText(String.valueOf(JSONlandmarks));
                 for (int i = 0; i < JSONlandmarks.length(); i++) {
                     String tempName = JSONlandmarks.getString(String.valueOf(i));
-                    Log.d("waypoint",tempName);
-                    temp = temp + " " + tempName;
-                    Log.d("temp",temp);
                     savedWaypointNames.add(tempName);
+                    Log.d("savedwaypoints",tempName);
                 }
                 waypointView.setText(temp);
-                filledSavedWaypoints = true;
+                //filledSavedWaypoints = true;
                 ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                         android.R.layout.simple_list_item_1, android.R.id.text1, savedWaypointNames);
                 listView.setAdapter(adapter);
@@ -578,22 +577,36 @@ public class HelloAreaDescriptionActivity extends Activity implements
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-        }
-
     }
+
 
     private void selectButtonClicked(){
         loadWaypoint(mIsConstantSpaceRelocalize);
 
-        if(savedWaypointNames.size() != 0) {
-            Log.d("Select again", "Select clicked after");
-            chosenLandmark = savedWaypointNames.get(chosenIndex);
-            String speakToUser = chosenLandmark +" " + "Selected";
-            ConvertTextToSpeech(speakToUser);
+        if (mIsNavigatingMode) {
+            Toast t;
+            if (mRotationDiff > 0) {
+                // rotate counterclockwise or turn left
+                t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(mRotationDiff) + "(Counter-clockwise)", Toast.LENGTH_LONG);
+                ConvertTextToSpeech("Rotate left " + mRotationDiff + "degrees");
 
-        }
-        if(savedWaypointNames.size() == 0){
-            Log.d("select","no waypoints");
+            } else {
+                // rotate clockwise or turn right
+                t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(mRotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
+                ConvertTextToSpeech("Rotate right " + Math.abs(mRotationDiff) + "degrees");
+            }
+            t.show();
+        } else {
+            if (savedWaypointNames.size() != 0) {
+                Log.d("Select again", "Select clicked after");
+                chosenLandmark = savedWaypointNames.get(chosenIndex);
+                String speakToUser = chosenLandmark + " " + "Selected";
+                ConvertTextToSpeech(speakToUser);
+
+            }
+            if (savedWaypointNames.size() == 0) {
+                Log.d("select", "no waypoints");
+            }
         }
     }
 
@@ -919,6 +932,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
                     "Reached Destination!", Toast.LENGTH_SHORT);
             t2.show();
 
+            ConvertTextToSpeech("Reached Destination");
+
             mIsNavigatingMode = false;
             mNextWaypointTextView.setText("");
             mNextRotationTextView.setText("");
@@ -933,24 +948,17 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         // Calculate the necessary rotation difference
         float rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator-1];
+
+        // Checking for the min of rotating either left or right
         if(Math.abs(rotationDiff) > 180) {
             if (rotationDiff > 0) {
                 rotationDiff = rotationDiff - 360;
             } else {
-                rotationDiff = 360 - rotationDiff;
+                rotationDiff = 360 - Math.abs(rotationDiff);
             }
         }
-        Toast t;
-        if (rotationDiff > 0) {
-            // rotate counterclockwise or turn left
-            t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Counter-clockwise)", Toast.LENGTH_LONG);
-            ConvertTextToSpeech("Rotate left by " + rotationDiff + " degrees");
-        } else {
-            // rotate clockwise or turn right
-            t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
-            ConvertTextToSpeech("Rotate right " + Math.abs(rotationDiff) + "degrees");
-        }
-        t.show();
+        mRotationDiff = rotationDiff;
+        ConvertTextToSpeech("Please hold for rotation");
 
         // Send rotation through bluetooth
         float[] rotation = new float[1];
@@ -1018,11 +1026,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                 loadSavedNames = true;
 
-                String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
+                //String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
 
                 landmarksStored = "empty file";
 
-                landmarksStored = readFile(adfFileName);
+                landmarksStored = readFile(selectedUUID);
 
                 Log.d("landmarksStored", landmarksStored);
 

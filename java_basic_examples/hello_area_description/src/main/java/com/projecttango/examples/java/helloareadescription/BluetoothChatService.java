@@ -52,6 +52,7 @@ public class BluetoothChatService extends Service {
             super.onConnectionStateChange(gatt, status, newState);
             if (newState == BluetoothGatt.STATE_CONNECTED) {
                 android.util.Log.d(TAG, "Connected!");
+
                 // Discover services.
                 if (!gatt.discoverServices()) {
                     android.util.Log.d(TAG, "Failed to start discovering services!");

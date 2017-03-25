@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -39,6 +40,7 @@ public class StartActivity extends Activity {
     // Permission request action.
     public static final int REQUEST_CODE_TANGO_PERMISSION = 0;
     public static final int REQUEST_CODE_ENABLE_BT_PERMISSION = 1;
+    private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
 
 
     // UI elements.
@@ -48,6 +50,8 @@ public class StartActivity extends Activity {
     private boolean mIsUseAreaLearning;
     private boolean mIsLoadAdf;
 
+    private Button mStartButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,18 +59,27 @@ public class StartActivity extends Activity {
         setTitle(R.string.app_name);
 
         // Setup UI elements.
+
+        mStartButton = (Button) findViewById(R.id.start);
+
         mLearningModeToggleButton = (ToggleButton) findViewById(R.id.learning_mode);
         mLoadAdfToggleButton = (ToggleButton) findViewById(R.id.load_adf);
 
         mIsUseAreaLearning = mLearningModeToggleButton.isChecked();
         mIsLoadAdf = mLoadAdfToggleButton.isChecked();
 
+
+
         startActivityForResult(
                 Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE), 0);
+
+
 
         Intent bluetoothService = new Intent(this, BluetoothChatService.class);
         startService(bluetoothService);
     }
+
+
 
     /**
      * The "Load ADF" button has been clicked.
@@ -74,6 +87,8 @@ public class StartActivity extends Activity {
      * */
     public void loadAdfClicked(View v) {
         mIsLoadAdf = mLoadAdfToggleButton.isChecked();
+        mStartButton.setEnabled(!mIsLoadAdf);
+
     }
 
     /**
@@ -146,4 +161,6 @@ public class StartActivity extends Activity {
             }
         }
     }
+
+
 }
