@@ -918,6 +918,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             Toast t2 = Toast.makeText(getApplicationContext(),
                     "Reached Destination!", Toast.LENGTH_SHORT);
             t2.show();
+            ConvertTextToSpeech("You arrived at your destination");
 
             mIsNavigatingMode = false;
             mNextWaypointTextView.setText("");
@@ -944,11 +945,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
         if (rotationDiff > 0) {
             // rotate counterclockwise or turn left
             t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Counter-clockwise)", Toast.LENGTH_LONG);
-            ConvertTextToSpeech("Rotate left by " + rotationDiff + " degrees");
+            ConvertTextToSpeech("Rotate left by " + (int)rotationDiff + " degrees");
         } else {
             // rotate clockwise or turn right
             t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(rotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
-            ConvertTextToSpeech("Rotate right " + Math.abs(rotationDiff) + "degrees");
+            ConvertTextToSpeech("Rotate right " + (int)Math.abs(rotationDiff) + "degrees");
         }
         t.show();
 
