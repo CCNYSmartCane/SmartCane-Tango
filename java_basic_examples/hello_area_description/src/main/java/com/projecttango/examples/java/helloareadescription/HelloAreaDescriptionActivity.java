@@ -22,6 +22,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Path;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.content.LocalBroadcastManager;
@@ -36,6 +37,7 @@ import android.widget.Toast;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.atap.tangoservice.Tango;
@@ -61,9 +63,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import static com.projecttango.examples.java.helloareadescription.Helper.getEulerAngleZ;
 import static com.projecttango.examples.java.helloareadescription.Helper.roundToNearestHalf;
@@ -82,6 +87,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private static final int SECS_TO_MILLISECS = 1000;
     private Tango mTango;
     private TangoConfig mConfig;
+
     private TextView mUuidTextView;
     private TextView mRelocalizationTextView;
     private TextView mCurrentLocationTextView;
@@ -90,6 +96,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private TextView mNextWaypointTextView;
     private TextView mDestinationTextView;
     private TextView mReachedDestinationTextView;
+    private TextView mLandMarkTextView;
+    private TextView mJSONTextView;
 
     private Button mSaveAdfButton;
     private Button mSaveLandButton;
@@ -135,7 +143,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private String jsonFileString;
     private String chosenLandmark;
 
-    private Map<Node, List<Node>> adjacencyList;
+    private Set coordinateSet = new HashSet<Node>();
     private float maxX = 0f;
     private float minX = 0f;
     private float maxY = 0f;
@@ -157,7 +165,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private ListView listView;
     private Boolean filledSavedWaypoints = false;
 
-    private TextView waypointView;
     private float mRotationDiff;
 
     private float granularity = 0.5f;
@@ -267,11 +274,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mNextRotationTextView = (TextView) findViewById(R.id.next_rotation_textview);
         mNextWaypointTextView = (TextView) findViewById(R.id.next_waypoint_textview);
         mReachedDestinationTextView = (TextView) findViewById(R.id.reached_destination_textview);
+        mLandMarkTextView = (TextView) findViewById(R.id.landMarkTextView);
         mSaveLandButton = (Button) findViewById(R.id.land_button);
         mLandmarkName = (EditText) findViewById(R.id.landmarkName);
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
         mChooseLandButton = (Button) findViewById(R.id.chooseLandButton);
-        waypointView = (TextView) findViewById(R.id.waypointView);
+        mJSONTextView = (TextView) findViewById(R.id.JSONView);
 
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -298,7 +306,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         });
 
-        if(isLoadAdf) {
+        if (isLoadAdf && !isLearningMode) {
             mSaveLandButton.setVisibility(View.GONE);
             mLandmarkName.setVisibility(View.GONE);
 
@@ -326,8 +334,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
 
             printMatrix();
+        } else if (!isLoadAdf && isLearningMode) {
+            mChooseLandButton.setVisibility(View.GONE);
+            mDestLandmark.setVisibility(View.GONE);
+            mLandMarkTextView.setVisibility(View.GONE);
+            mJSONTextView.setVisibility(View.GONE);
         }
     }
+
+
 
     /**
      * Sets up the tango configuration object. Make sure mTango object is initialized before
@@ -407,7 +422,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
 
                             if (mIsLearningMode) { // Record coordinates for grid
-                                recordCoordinates();
+                                updateCoordinates();
                             }
                         } else {
                             mIsRelocalized = false;
@@ -495,7 +510,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         });
     }
 
-    private void recordCoordinates() {
+    private void updateCoordinates() {
         float x = roundToNearestHalf(translation[0]);
         float y = roundToNearestHalf(translation[1]);
 
@@ -505,35 +520,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         if(y > maxY) {maxY = y;}
         if(y < minY) {minY = y;}
 
-        Node currentNode = new Node((int)(x*2), (int)(y*2));
+        Node currentNode = new Node(x, y);
 
-        if (adjacencyList == null) {
-            adjacencyList = new HashMap<Node, List<Node>>();
-            adjacencyList.put(currentNode, new ArrayList<Node>());
-        } else {
-            if (!adjacencyList.containsKey(currentNode)) {
-                adjacencyList.put(currentNode, new ArrayList<Node>());
-            }
-            // Check if any nodes have current as a neighbor
-            float neighborX;
-            float neighborY;
-
-            for (int i = -1; i < 2; i++) {
-                for (int j = -1; j < 2; j++) {
-                    if (i == 0 && j == 0) {
-                        continue;
-                    }
-
-                    neighborX = x + i*granularity;
-                    neighborY = y + j*granularity;
-                    Node neighbor = new Node(neighborX, neighborY);
-                    if (adjacencyList.containsKey(neighbor)) {
-                        adjacencyList.get(neighbor).add(currentNode);
-                    }
-                }
-            }
-
-        }
+        coordinateSet.add(currentNode);
     }
 
     private void processArduinoValues(String arduinoSent){
@@ -563,30 +552,30 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void fillSavedNamesList(){
-            try {
-                Log.d("Fill", "fill saved list ");
-                JSONObject jsonObj = new JSONObject(jsonFileString);
-                String temp = " ";
-                waypointView.setText(String.valueOf(jsonObj));
-                for (int i = 0; i < jsonObj.length(); i++) {
-                    String tempName = jsonObj.getString(String.valueOf(i));
-                    savedWaypointNames.add(tempName);
-                    Log.d("savedwaypoints",tempName);
-                }
-                waypointView.setText(temp);
-                ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                        android.R.layout.simple_list_item_1, android.R.id.text1, savedWaypointNames);
-                listView.setAdapter(adapter);
+        try {
+            Log.d("Fill", "fill saved list ");
+            JSONObject jsonObj = new JSONObject(jsonFileString);
 
-            } catch (JSONException e) {
-                e.printStackTrace();
+            mJSONTextView.setText(String.valueOf(jsonObj));
+            Log.i("JSON", String.valueOf(jsonObj));
+
+            for (int i = 0; i < jsonObj.length(); i++) {
+                String key = jsonObj.getString(String.valueOf(i));
+                savedWaypointNames.add(key);
+                Log.d("savedwaypoints",key);
             }
+
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                    android.R.layout.simple_list_item_1, android.R.id.text1, savedWaypointNames);
+            listView.setAdapter(adapter);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
 
     private void selectButtonClicked(){
-        loadWaypoint(mIsConstantSpaceRelocalize);
-
         if (mIsNavigatingMode) {
             Toast t;
             if (mRotationDiff > 0) {
@@ -601,6 +590,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
             t.show();
         } else {
+            loadWaypoint(mIsConstantSpaceRelocalize);
+
             if (savedWaypointNames.size() != 0) {
                 Log.d("Select again", "Select clicked after");
                 chosenLandmark = savedWaypointNames.get(chosenIndex);
@@ -641,7 +632,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private String readFile(String adfId){
-
         StringBuilder finalString = new StringBuilder();
 
         try {
@@ -798,6 +788,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private void handlePathFinding() {
         // TODO: Need to remove and refactor duplicate readFile from current ADF selected
         loadValuesFromJson();
+        PathFinder.coordinateSet = coordinateSet;
+        PathFinder.granularity = granularity;
 
         Node start = new Node(roundToNearestHalf(translation[0]), roundToNearestHalf(translation[1]));
         Node end = new Node(roundToNearestHalf(mDestinationTranslation[0]), roundToNearestHalf(mDestinationTranslation[1]));
@@ -849,6 +841,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             mIsNavigatingMode = false;
             mNextWaypointTextView.setText("");
             mNextRotationTextView.setText("");
+            coordinateSet = new HashSet<Node>();
             return;
         }
 
@@ -978,7 +971,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         try {
             JSONObject jsonObj = new JSONObject(readFile(fileName));
 
-            jsonObj.put("adjacencyList", new ObjectMapper().writeValueAsString(adjacencyList));
+            jsonObj.put("coordinateSet", new ObjectMapper().writeValueAsString(coordinateSet));
             jsonObj.put("maxX", maxX);
             jsonObj.put("maxY", maxY);
             jsonObj.put("minX", minX);
@@ -1002,20 +995,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     public void loadValuesFromJson() {
         try {
-            JSONObject jsonObj = new JSONObject(jsonFileString);
-            String adjacencyListString = jsonObj.getString("adjacencyList");
-            adjacencyList = new ObjectMapper().readValue(adjacencyListString, Map.class);
+//            adjacencyList = new ObjectMapper().readValue(jsonFileString, new TypeReference<Map<Node, List<Node>>>() {});
+
+            JSONObject jsonObj = new JSONObject(readFile(jsonFileString));
+            coordinateSet = (Set<Node>)jsonObj.get("coordinateSet");
             maxX = (float)jsonObj.getDouble("maxX");
             maxY = (float)jsonObj.getDouble("maxY");
             minX = (float)jsonObj.getDouble("minX");
             minY = (float)jsonObj.getDouble("mixY");
         } catch (JSONException e) {
-            e.printStackTrace();
-        } catch (JsonParseException e) {
-            e.printStackTrace();
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -1031,8 +1019,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         boolean[][] coordinateMatrix = new boolean[xLength][yLength];
 
-        for(Node k: adjacencyList.keySet()) {
-            coordinateMatrix[(int)(k.getX()/granularity)+offsetX][(int)(k.getY()/granularity)+offsetY] = true;
+        for (Node current : (Iterable<Node>) coordinateSet) {
+            coordinateMatrix[(int) (current.getX() / granularity) + offsetX][(int) (current.getY() / granularity) + offsetY] = true;
         }
 
         for(int i=0; i<xLength; i++) {

@@ -10,11 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Set;
 
 class PathFinder {
-    static Map<Node, List<Node>> adjacencyList;
+    static Set<Node> coordinateSet;
     static List<Node> totalPath;
     static List<Node> squashedPath;
+    static float granularity;
 
     public static boolean pathfind(Node start, Node goal) {
         List<Node> closedList = new ArrayList<Node>();
@@ -41,7 +43,7 @@ class PathFinder {
             closedList.add(current);
             System.out.println(closedList.size());
 
-            List<Node> neighbors = adjacencyList.get(current);
+            List<Node> neighbors = getNeighbors(current);
             for (Node n : neighbors) {
                 if (closedList.contains(n)) {
                     continue;
@@ -63,6 +65,32 @@ class PathFinder {
         }
 
         return false;
+    }
+
+    private static List<Node> getNeighbors(Node current) {
+        List<Node> neighbors = new ArrayList<Node>();
+        float x = current.getX();
+        float y = current.getY();
+        float neighborX;
+        float neighborY;
+
+        for (int i = -1; i < 2; i++) {
+            for (int j = -1; j < 2; j++) {
+                if (i == 0 && j == 0) {
+                    continue;
+                }
+
+                neighborX = x + i*granularity;
+                neighborY = y + j*granularity;
+                Node neighbor = new Node(neighborX, neighborY);
+                if (coordinateSet.contains(neighbor)) {
+                    neighbors.add(neighbor);
+                }
+
+            }
+        }
+
+        return neighbors;
     }
 
     private static float distanceBetween(Node current, Node n) {
@@ -124,10 +152,6 @@ class PathFinder {
 
     private static double euclideanDistance(Node current, Node n) {
         return Math.sqrt(Math.pow(current.getX() - n.getX(), 2) + Math.pow(current.getY() - n.getY(), 2));
-    }
-
-    public static void setAdjacencyList(Map<Node, List<Node>> adjacencyList) {
-        PathFinder.adjacencyList = adjacencyList;
     }
 }
 

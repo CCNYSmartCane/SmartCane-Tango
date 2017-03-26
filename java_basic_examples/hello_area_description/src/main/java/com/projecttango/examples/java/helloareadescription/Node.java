@@ -60,11 +60,16 @@ class Node {
 
         Node node = (Node) o;
 
-        return this.x == node.x && this.y == node.y;
+        if (Float.compare(node.x, x) != 0)
+            return false;
+        return Float.compare(node.y, y) == 0;
+
     }
 
     @Override
-    public String toString(){
-        return String.valueOf(x) + ", " + String.valueOf(y);
+    public int hashCode() {
+        int result = (x != +0.0f ? Float.floatToIntBits(x) : 0);
+        result = 31 * result + (y != +0.0f ? Float.floatToIntBits(y) : 0);
+        return result;
     }
 }
