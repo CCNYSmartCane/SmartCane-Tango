@@ -96,19 +96,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private float[] translation;
     private float[] orientation;
 
-    private boolean mSaveLand;
     private ArrayList<TangoPoseData> landmarkList = new ArrayList<TangoPoseData>();
     private ArrayList<String> landmarkName = new ArrayList<String>();
     private ArrayList<String> adfName = new ArrayList<String>();
     private TangoPoseData currentPose;
     private ArrayList<String> savedWaypointNames = new ArrayList<String>();
-
-    private boolean loadSavedNames = false;
-    private int loadCount = 0;
-
-
-    private float[] arrayLands;
-    private int countLands = 0;
 
     private double mPreviousPoseTimeStamp;
     private double mTimeToNextUpdate = UPDATE_INTERVAL_MS;
@@ -147,7 +139,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private boolean mIsNavigatingMode = false;
     private int waypointIterator;
 
-
     private int chosenIndex = 0;
 
     private TextToSpeech mTts;
@@ -156,7 +147,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private String selectedUUID;
 
     private ListView listView;
-    private Boolean filledSavedWaypoints = false;
 
     private TextView waypointView;
     private float mRotationDiff;
@@ -177,9 +167,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
         Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
 
         listView = (ListView) findViewById(R.id.list);
-
-
-
     }
 
     @Override
@@ -454,10 +441,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mCurrentLocationTextView.setText(mPositionString);
                                     mZRotationTextView.setText(mZRotationString);
 
-//                                    Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
-//                                    serviceIntent.putExtra("position", translation);
-//                                    getApplicationContext().startService(serviceIntent);
-
                                     float lowerBound_X = mDestinationTranslation[0] - 0.15f;
                                     float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
                                     float lowerBound_Z = mDestinationTranslation[2] - 0.15f;
@@ -557,8 +540,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void selectButtonClicked(){
-        loadWaypoint(mIsConstantSpaceRelocalize);
-
         if (mIsNavigatingMode) {
             Toast t;
             if (mRotationDiff > 0) {
@@ -573,6 +554,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
             t.show();
         } else {
+            loadWaypoint(mIsConstantSpaceRelocalize);
+
             if (savedWaypointNames.size() != 0) {
                 Log.d("Select again", "Select clicked after");
                 chosenLandmark = savedWaypointNames.get(chosenIndex);
@@ -812,7 +795,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     private void handlePathFinding() {
-        // TODO: Need to remove and refactor duplicate readFile from current ADF selected
         ArrayList<String> fullUuidList;
         // Returns a list of ADFs with their UUIDs
         fullUuidList = mTango.listAreaDescriptions();
@@ -999,10 +981,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
             // Returns a list of ADFs with their UUIDs
             fullUuidList = mTango.listAreaDescriptions();
             if(fullUuidList.size() > 0) {
-
-                loadSavedNames = true;
-
-                //String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
 
                 landmarksStored = "empty file";
 
