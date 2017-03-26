@@ -17,6 +17,7 @@
 package com.projecttango.examples.java.helloareadescription;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -40,8 +41,6 @@ public class StartActivity extends Activity {
     // Permission request action.
     public static final int REQUEST_CODE_TANGO_PERMISSION = 0;
     public static final int REQUEST_CODE_ENABLE_BT_PERMISSION = 1;
-    private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
-
 
     // UI elements.
     private ToggleButton mLearningModeToggleButton;
@@ -74,9 +73,13 @@ public class StartActivity extends Activity {
                 Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE), 0);
 
 
-
-        Intent bluetoothService = new Intent(this, BluetoothChatService.class);
-        startService(bluetoothService);
+        if(!BluetoothAdapter.getDefaultAdapter().isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_CODE_ENABLE_BT_PERMISSION);
+        } else {
+            Intent bluetoothService = new Intent(this, BluetoothChatService.class);
+            startService(bluetoothService);
+        }
     }
 
 
@@ -158,6 +161,9 @@ public class StartActivity extends Activity {
             if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this, R.string.bluetooth_permission, Toast.LENGTH_SHORT).show();
                 finish();
+            } else {
+                Intent bluetoothService = new Intent(this, BluetoothChatService.class);
+                startService(bluetoothService);
             }
         }
     }

@@ -142,17 +142,15 @@ public class BluetoothChatService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
-//            sendMessage(intent.getFloatArrayExtra("position"));
             sendMessage(intent.getFloatArrayExtra("rotation"));
         }
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     // OnCreate, called once to initialize the activity.
     @Override
     public void onCreate() {
         adapter = BluetoothAdapter.getDefaultAdapter();
-        // TODO Get permission for bluetooth
 
         // Scan for all BTLE devices.
         // The first one with the UART service will be chosen--see the code in the scanCallback.
