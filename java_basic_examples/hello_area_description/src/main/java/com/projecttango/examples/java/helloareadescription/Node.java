@@ -5,25 +5,25 @@ package com.projecttango.examples.java.helloareadescription;
  */
 
 class Node {
-    private int x;
-    private int y;
+    private float x;
+    private float y;
     private Node prev;
-    private int gScore;
-    private int fScore;
+    private float gScore;
+    private float fScore;
 
-    public Node(int x, int y) {
+    public Node(float x, float y) {
         this.x = x;
         this.y = y;
         this.prev = null;
-        this.gScore = Integer.MAX_VALUE;
-        this.fScore = Integer.MAX_VALUE;
+        this.gScore = Float.MAX_VALUE;
+        this.fScore = Float.MAX_VALUE;
     }
 
-    public int getX() {
+    public float getX() {
         return x;
     }
 
-    public int getY() {
+    public float getY() {
         return y;
     }
 
@@ -35,19 +35,19 @@ class Node {
         this.prev = prev;
     }
 
-    public int getgScore() {
+    public float getgScore() {
         return gScore;
     }
 
-    public void setgScore(int gScore) {
+    public void setgScore(float gScore) {
         this.gScore = gScore;
     }
 
-    public int getfScore() {
+    public float getfScore() {
         return fScore;
     }
 
-    public void setfScore(int fScore) {
+    public void setfScore(float fScore) {
         this.fScore = fScore;
     }
 

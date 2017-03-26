@@ -34,6 +34,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.TangoAreaDescriptionMetaData;
@@ -47,7 +51,6 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -57,14 +60,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 
 import static com.projecttango.examples.java.helloareadescription.Helper.getEulerAngleZ;
 import static com.projecttango.examples.java.helloareadescription.Helper.roundToNearestHalf;
 import static java.lang.String.valueOf;
+
 
 /**
  * Main Activity class for the Area Description example. Handles the connection to the Tango service
@@ -128,19 +132,14 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private final Object mSharedLock = new Object();
 
-    private String landmarksStored;
+    private String jsonFileString;
     private String chosenLandmark;
-    private float xPose = 0.0f;
-    private float yPose = 0.0f;
-    private float zPose = 0.0f;
 
-    private Set<Node> coordinateSet = new HashSet<Node>();
-    private float maxX = 0;
-    private float minX = 0;
-    private float maxY = 0;
-    private float minY = 0;
-    private int offsetX = 0;
-    private int offsetY = 0;
+    private Map<Node, List<Node>> adjacencyList;
+    private float maxX = 0f;
+    private float minX = 0f;
+    private float maxY = 0f;
+    private float minY = 0f;
 
     private List<Node> squashedPath;
     private float[] rotationsArray;
@@ -161,6 +160,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private TextView waypointView;
     private float mRotationDiff;
 
+    private float granularity = 0.5f;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -177,9 +178,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
         Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
 
         listView = (ListView) findViewById(R.id.list);
-
-
-
     }
 
     @Override
@@ -278,7 +276,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                loadWaypoint(mIsConstantSpaceRelocalize);
+                selectButtonClicked();
             }
         });
 
@@ -322,10 +320,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         + "Selected ADF is "
                         + selectedUUID);
 
-                landmarksStored = "empty file";
-                landmarksStored = readFile(selectedUUID);
+                jsonFileString = "empty file";
+                jsonFileString = readFile(selectedUUID);
                 fillSavedNamesList();
             }
+
+            printMatrix();
         }
     }
 
@@ -400,26 +400,14 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                             mIsRelocalized = true;
 
-                            StringBuilder stringBuilder = new StringBuilder();
-
                             translation = pose.getTranslationAsFloats();
                             orientation = pose.getRotationAsFloats();
 
-                            stringBuilder.append("X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2]);
-                            mPositionString = stringBuilder.toString();
+                            mPositionString = "X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2];
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
 
                             if (mIsLearningMode) { // Record coordinates for grid
-                                float x = roundToNearestHalf(translation[0]);
-                                float y = roundToNearestHalf(translation[1]);
-
-                                // Set the min and max to find the length of grid
-                                if(x > maxX) {maxX = x;}
-                                if(x < minX) {minX = x;}
-                                if(y > maxY) {maxY = y;}
-                                if(y < minY) {minY = y;}
-
-                                coordinateSet.add(new Node((int)(x*2), (int)(y*2)));
+                                recordCoordinates();
                             }
                         } else {
                             mIsRelocalized = false;
@@ -449,7 +437,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                         getString(R.string.not_localized));
 
                                 if (mIsRelocalized) {
-//                                    mFileContentView.setText(landmarksStored);
+//                                    mFileContentView.setText(jsonFileString);
 
                                     mCurrentLocationTextView.setText(mPositionString);
                                     mZRotationTextView.setText(mZRotationString);
@@ -472,9 +460,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                                     if (mIsNavigatingMode) {
                                         Node nextWaypoint = squashedPath.get(waypointIterator);
-                                        if (roundToNearestHalf(translation[0]) == (nextWaypoint.getX()-offsetX)/2.0
-                                                && roundToNearestHalf(translation[1]) == (nextWaypoint.getY()-offsetY)/2.0) {
-
+                                        if ((roundToNearestHalf(translation[0]) == nextWaypoint.getX())
+                                                && (roundToNearestHalf(translation[1]) == nextWaypoint.getY())) {
                                             // Made it to the nextWaypoint
                                             updateWaypoint();
                                         }
@@ -508,6 +495,47 @@ public class HelloAreaDescriptionActivity extends Activity implements
         });
     }
 
+    private void recordCoordinates() {
+        float x = roundToNearestHalf(translation[0]);
+        float y = roundToNearestHalf(translation[1]);
+
+        // Set the min and max to find the length of grid
+        if(x > maxX) {maxX = x;}
+        if(x < minX) {minX = x;}
+        if(y > maxY) {maxY = y;}
+        if(y < minY) {minY = y;}
+
+        Node currentNode = new Node((int)(x*2), (int)(y*2));
+
+        if (adjacencyList == null) {
+            adjacencyList = new HashMap<Node, List<Node>>();
+            adjacencyList.put(currentNode, new ArrayList<Node>());
+        } else {
+            if (!adjacencyList.containsKey(currentNode)) {
+                adjacencyList.put(currentNode, new ArrayList<Node>());
+            }
+            // Check if any nodes have current as a neighbor
+            float neighborX;
+            float neighborY;
+
+            for (int i = -1; i < 2; i++) {
+                for (int j = -1; j < 2; j++) {
+                    if (i == 0 && j == 0) {
+                        continue;
+                    }
+
+                    neighborX = x + i*granularity;
+                    neighborY = y + j*granularity;
+                    Node neighbor = new Node(neighborX, neighborY);
+                    if (adjacencyList.containsKey(neighbor)) {
+                        adjacencyList.get(neighbor).add(currentNode);
+                    }
+                }
+            }
+
+        }
+    }
+
     private void processArduinoValues(String arduinoSent){
 
         Log.d("select", "processCalled");
@@ -537,11 +565,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private void fillSavedNamesList(){
             try {
                 Log.d("Fill", "fill saved list ");
-                JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+                JSONObject jsonObj = new JSONObject(jsonFileString);
                 String temp = " ";
-                waypointView.setText(String.valueOf(JSONlandmarks));
-                for (int i = 0; i < JSONlandmarks.length(); i++) {
-                    String tempName = JSONlandmarks.getString(String.valueOf(i));
+                waypointView.setText(String.valueOf(jsonObj));
+                for (int i = 0; i < jsonObj.length(); i++) {
+                    String tempName = jsonObj.getString(String.valueOf(i));
                     savedWaypointNames.add(tempName);
                     Log.d("savedwaypoints",tempName);
                 }
@@ -637,9 +665,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         }
 
-        String landmarkString = finalString.toString();
-
-        return landmarkString;
+        return finalString.toString();
     }
 
     private void saveLandmarks(String id) {
@@ -653,17 +679,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         JSONObject jsonObj = new JSONObject();
 
         for (int i = 0; i < size; i++) {
-            StringBuilder xNameBuilder = new StringBuilder();
-            StringBuilder yNameBuilder = new StringBuilder();
-            StringBuilder zNameBuilder = new StringBuilder();
-
-            xNameBuilder.append(landmarkName.get(i) + "_x");
-            yNameBuilder.append(landmarkName.get(i) + "_y");
-            zNameBuilder.append(landmarkName.get(i) + "_z");
-
-            String xName = xNameBuilder.toString();
-            String yName = yNameBuilder.toString();
-            String zName = zNameBuilder.toString();
+            String xName = (landmarkName.get(i) + "_x");
+            String yName = (landmarkName.get(i) + "_y");
+            String zName = (landmarkName.get(i) + "_z");
 
             float translationStored[] = landmarkList.get(i).getTranslationAsFloats();
             String xPose = Float.toString(translationStored[0]);
@@ -682,14 +700,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
 
         // Create a file in the Internal Storage
-        String fileName = id; //name file with uuid
         String content = jsonObj.toString();
         Log.d("content", content);
-        Log.d("filename", fileName);
+        Log.d("filename", id);
 
-        FileOutputStream outputStream = null;
         try {
-            outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
+            FileOutputStream outputStream = openFileOutput(id, Context.MODE_PRIVATE);
             outputStream.write(content.getBytes());
             outputStream.close();
         } catch (Exception e) {
@@ -759,7 +775,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
         saveLandmarks(adfUuid);
-        saveCoordinateMatrix(adfUuid);
+        storeValuesToJSON(adfUuid);
         finish();
     }
 
@@ -778,91 +794,13 @@ public class HelloAreaDescriptionActivity extends Activity implements
         setAdfNameDialog.show(manager, "ADFNameDialog");
     }
 
-    private void saveCoordinateMatrix(String fileName) {
-        int xLength = (int)((maxX - minX)*2) + 1;
-        int yLength = (int)((maxY - minY)*2) + 1;
-        offsetX = Math.abs((int)(minX*2));
-        offsetY = Math.abs((int)(minY*2));
-
-        boolean[][] coordinateMatrix = new boolean[xLength][yLength];
-
-        for(Node n: coordinateSet) {
-            coordinateMatrix[n.getX()+offsetX][n.getY()+offsetY] = true;
-        }
-
-        JSONObject jsonObj = null;
-        try {
-            jsonObj = new JSONObject(readFile(fileName));
-            jsonObj.put("coordinateMatrix", new JSONArray(coordinateMatrix));
-            jsonObj.put("offsetX", offsetX);
-            jsonObj.put("offsetY", offsetY);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        String content = jsonObj.toString();
-
-        try {
-            FileOutputStream outputStream= openFileOutput(fileName, Context.MODE_PRIVATE);
-            outputStream.write(content.getBytes());
-            outputStream.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     private void handlePathFinding() {
         // TODO: Need to remove and refactor duplicate readFile from current ADF selected
-        ArrayList<String> fullUuidList;
-        // Returns a list of ADFs with their UUIDs
-        fullUuidList = mTango.listAreaDescriptions();
-        if (fullUuidList.size() > 0) {
+        loadValuesFromJson();
 
-            String jsonString = readFile(fullUuidList.get(fullUuidList.size() - 1));
-            try {
-                JSONObject jsonObj = new JSONObject(jsonString);
-                offsetX = jsonObj.getInt("offsetX");
-                offsetY = jsonObj.getInt("offsetY");
-
-                JSONArray array = jsonObj.getJSONArray("coordinateMatrix");
-
-                int xLength = array.length();
-                int yLength = array.getJSONArray(0).length();
-                boolean[][] coordinateMatrix = new boolean[xLength][yLength];
-
-                for(int i=0; i<xLength; i++) {
-                    for(int j=0; j<yLength; j++) {
-                        coordinateMatrix[i][j] = Boolean.valueOf(array.getJSONArray(i).getString(j));
-                    }
-                }
-
-                PathFinder.xLength = xLength;
-                PathFinder.yLength = yLength;
-                PathFinder.coordinateMatrix = coordinateMatrix;
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-        String s = "";
-        for(int i=0; i<PathFinder.xLength; i++) {
-            for(int j=0; j<PathFinder.yLength; j++) {
-                if (PathFinder.coordinateMatrix[i][j]) {
-                    s += "1,";
-                } else {
-                    s += "0,";
-                }
-            }
-            s += "\n";
-        }
-        Log.i("Matrix", s);
-
-        // Add the offset
-        Node start = new Node((int)(roundToNearestHalf(translation[0])*2)+offsetX,
-                (int)(roundToNearestHalf(translation[1])*2)+offsetY);
-        Node end = new Node((int)(roundToNearestHalf(mDestinationTranslation[0])*2)+offsetX,
-                (int)(roundToNearestHalf(mDestinationTranslation[1])*2)+offsetY);
+        Node start = new Node(roundToNearestHalf(translation[0]), roundToNearestHalf(translation[1]));
+        Node end = new Node(roundToNearestHalf(mDestinationTranslation[0]), roundToNearestHalf(mDestinationTranslation[1]));
 
         if(PathFinder.pathfind(start, end)) {
             Toast t1 = Toast.makeText(getApplicationContext(), "Path Found!", Toast.LENGTH_SHORT);
@@ -870,14 +808,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
             String path = "";
             for(int i=0; i<PathFinder.squashedPath.size(); i++) {
-                // Remove offset and get real world coordinates
-                path += String.valueOf((PathFinder.squashedPath.get(i).getX()-offsetX)/2.0) + ", " + String.valueOf((PathFinder.squashedPath.get(i).getY()-offsetY)/2.0) + "\n";
+                path += String.valueOf(PathFinder.squashedPath.get(i).getX()) + ", "
+                        + String.valueOf(PathFinder.squashedPath.get(i).getY()) + "\n";
             }
 
             Toast t2 = Toast.makeText(getApplicationContext(), path, Toast.LENGTH_LONG);
             t2.show();
-
-            Log.i("PathFinder", "SquashedPath: " + path);
 
             squashedPath = PathFinder.squashedPath;
             getRotationsArray(squashedPath);
@@ -918,8 +854,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         Node nextWaypoint = squashedPath.get(waypointIterator);
 
-        mNextWaypointTextView.setText(String.valueOf((nextWaypoint.getX()-offsetX)/2.0) +
-                ", " + String.valueOf((nextWaypoint.getY()-offsetY)/2.0));
+        mNextWaypointTextView.setText(nextWaypoint.getX() +
+                ", " + nextWaypoint.getY());
         mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
 
         // Calculate the necessary rotation difference
@@ -1004,11 +940,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                 //String adfFileName = fullUuidList.get(fullUuidList.size() - 1);
 
-                landmarksStored = "empty file";
+                jsonFileString = "empty file";
 
-                landmarksStored = readFile(selectedUUID);
+                jsonFileString = readFile(selectedUUID);
 
-                Log.d("landmarksStored", landmarksStored);
+                Log.d("jsonFileString", jsonFileString);
 
                 // String from file to json and then set values of translation
 
@@ -1017,23 +953,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
                 //String lastLandmark = landmarkName.get(landmarkName.size()-1);
-                StringBuilder xNameBuilder = new StringBuilder();
-                StringBuilder yNameBuilder = new StringBuilder();
-                StringBuilder zNameBuilder = new StringBuilder();
-
-                xNameBuilder.append(chosenLandmark + "_x");
-                yNameBuilder.append(chosenLandmark + "_y");
-                zNameBuilder.append(chosenLandmark + "_z");
-
-                String xName = xNameBuilder.toString();
-                String yName = yNameBuilder.toString();
-                String zName = zNameBuilder.toString();
+                String xName = (chosenLandmark + "_x");
+                String yName = (chosenLandmark + "_y");
+                String zName = (chosenLandmark + "_z");
 
                 try {
-                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
-                    mDestinationTranslation[0] = Float.valueOf(JSONlandmarks.getString(xName));
-                    mDestinationTranslation[1] = Float.valueOf(JSONlandmarks.getString(yName));
-                    mDestinationTranslation[2] = Float.valueOf(JSONlandmarks.getString(zName));
+                    JSONObject jsonObj = new JSONObject(jsonFileString);
+                    mDestinationTranslation[0] = Float.valueOf(jsonObj.getString(xName));
+                    mDestinationTranslation[1] = Float.valueOf(jsonObj.getString(yName));
+                    mDestinationTranslation[2] = Float.valueOf(jsonObj.getString(zName));
                     mDestinationTextView.setText("X:" + mDestinationTranslation[0] + ", Y:" + mDestinationTranslation[1] + ", Z:" + mDestinationTranslation[2]);
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -1046,4 +974,77 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
     }
 
+    private void storeValuesToJSON(String fileName) {
+        try {
+            JSONObject jsonObj = new JSONObject(readFile(fileName));
+
+            jsonObj.put("adjacencyList", new ObjectMapper().writeValueAsString(adjacencyList));
+            jsonObj.put("maxX", maxX);
+            jsonObj.put("maxY", maxY);
+            jsonObj.put("minX", minX);
+            jsonObj.put("minY", minY);
+
+            String content = jsonObj.toString();
+
+            try {
+                FileOutputStream outputStream= openFileOutput(fileName, Context.MODE_PRIVATE);
+                outputStream.write(content.getBytes());
+                outputStream.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void loadValuesFromJson() {
+        try {
+            JSONObject jsonObj = new JSONObject(jsonFileString);
+            String adjacencyListString = jsonObj.getString("adjacencyList");
+            adjacencyList = new ObjectMapper().readValue(adjacencyListString, Map.class);
+            maxX = (float)jsonObj.getDouble("maxX");
+            maxY = (float)jsonObj.getDouble("maxY");
+            minX = (float)jsonObj.getDouble("minX");
+            minY = (float)jsonObj.getDouble("mixY");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (JsonParseException e) {
+            e.printStackTrace();
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void printMatrix() {
+        loadValuesFromJson();
+
+        int xLength = (int)((maxX - minX)/granularity) + 1;
+        int yLength = (int)((maxY - minY)/granularity) + 1;
+        int offsetX = Math.abs((int)(minX/granularity));
+        int offsetY = Math.abs((int)(minY/granularity));
+        String s = "";
+
+        boolean[][] coordinateMatrix = new boolean[xLength][yLength];
+
+        for(Node k: adjacencyList.keySet()) {
+            coordinateMatrix[(int)(k.getX()/granularity)+offsetX][(int)(k.getY()/granularity)+offsetY] = true;
+        }
+
+        for(int i=0; i<xLength; i++) {
+            for(int j=0; j<yLength; j++) {
+                if (coordinateMatrix[i][j]) {
+                    s += "1,";
+                } else {
+                    s += "0,";
+                }
+            }
+            s += "\n";
+        }
+        Log.i("Matrix", s);
+    }
 }

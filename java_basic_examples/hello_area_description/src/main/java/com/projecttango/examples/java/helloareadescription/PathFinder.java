@@ -7,13 +7,12 @@ package com.projecttango.examples.java.helloareadescription;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
 class PathFinder {
-    static int xLength;
-    static int yLength;
-    static boolean[][] coordinateMatrix;
+    static Map<Node, List<Node>> adjacencyList;
     static List<Node> totalPath;
     static List<Node> squashedPath;
 
@@ -32,7 +31,7 @@ class PathFinder {
             if (current.equals(goal)) {
                 totalPath = reconstructPath(current);
                 if(totalPath.size() > 2) {
-                    squashedPath = DouglasPeucker(totalPath, 2.0); // Since this is in 0.5 meters, then 2.0 -> 1.0 meter
+                    squashedPath = DouglasPeucker(totalPath, 1.5);
                 } else {
                     squashedPath = totalPath;
                 }
@@ -42,13 +41,13 @@ class PathFinder {
             closedList.add(current);
             System.out.println(closedList.size());
 
-            List<Node> neighbors = getNeighbors(current);
+            List<Node> neighbors = adjacencyList.get(current);
             for (Node n : neighbors) {
                 if (closedList.contains(n)) {
                     continue;
                 }
 
-                int tentativegScore = current.getgScore() + distanceBetween(current, n);
+                float tentativegScore = current.getgScore() + distanceBetween(current, n);
                 if (!openList.contains(n)) {
                     openList.add(n);
                 } else if (tentativegScore >= n.getgScore()) {
@@ -66,7 +65,7 @@ class PathFinder {
         return false;
     }
 
-    private static int distanceBetween(Node current, Node n) {
+    private static float distanceBetween(Node current, Node n) {
         return Math.abs(current.getX() - n.getX()) + Math.abs(current.getY() - n.getY());
     }
 
@@ -82,66 +81,6 @@ class PathFinder {
         Collections.reverse(totalPath);
 
         return totalPath;
-    }
-
-    private static List<Node> getNeighbors(Node current) {
-        List<Node> neighbors = new ArrayList<Node>();
-        int x = current.getX();
-        int y = current.getY();
-        int neighborX;
-        int neighborY;
-
-        for (int i = -1; i < 2; i++) {
-            for (int j = -1; j < 2; j++) {
-                if (i == 0 && j == 0) {
-                    continue;
-                }
-
-                neighborX = x + i;
-                neighborY = y + j;
-                if ((neighborX >= 0 && neighborX < xLength) && (neighborY >= 0 && neighborY < yLength)
-                        && coordinateMatrix[neighborX][neighborY]) {
-                    neighbors.add(new Node(neighborX, neighborY));
-                }
-            }
-        }
-
-        return neighbors;
-    }
-
-    private static List<Node> squashPath(List<Node> path) {
-        List<Node> squashedPath = new ArrayList<Node>();
-        Node current;
-        Node next;
-        int xDiff = 0;
-        int yDiff = 0;
-
-        for (int i = 0; i < path.size(); i++) {
-            current = path.get(i);
-            squashedPath.add(current);
-
-            if (i + 1 != path.size()) {
-                next = path.get(i + 1);
-                xDiff = next.getX() - current.getX();
-                yDiff = next.getY() - current.getY();
-                current = next;
-            }
-            for (int j = i + 2; j < path.size(); j++) {
-                next = path.get(j);
-                if (((next.getX() - current.getX()) != xDiff) || ((next.getY() - current.getY()) != yDiff)) {
-                    // end of straight path
-                    i = j - 2;
-                    break;
-                } else {
-                    // continue straight path
-                    current = next;
-                }
-                // finishes checking path list, so ensure the last node is
-                // inserted
-                i = j - 1;
-            }
-        }
-        return squashedPath;
     }
 
     private static List<Node> DouglasPeucker(List<Node> path, double epsilon) {
@@ -174,10 +113,10 @@ class PathFinder {
     }
 
     private static double perpendicularDistance(Node p, Node lineStart, Node lineEnd) {
-        int y2 = lineEnd.getY();
-        int y1 = lineStart.getY();
-        int x2 = lineEnd.getX();
-        int x1 = lineStart.getX();
+        float y2 = lineEnd.getY();
+        float y1 = lineStart.getY();
+        float x2 = lineEnd.getX();
+        float x1 = lineStart.getX();
 
         return Math.abs((y2 - y1) * p.getX() - (x2 - x1) * p.getY() + x2 * y1 - y2 * x1)
                 / euclideanDistance(lineStart, lineEnd);
@@ -185,6 +124,10 @@ class PathFinder {
 
     private static double euclideanDistance(Node current, Node n) {
         return Math.sqrt(Math.pow(current.getX() - n.getX(), 2) + Math.pow(current.getY() - n.getY(), 2));
+    }
+
+    public static void setAdjacencyList(Map<Node, List<Node>> adjacencyList) {
+        PathFinder.adjacencyList = adjacencyList;
     }
 }
 
