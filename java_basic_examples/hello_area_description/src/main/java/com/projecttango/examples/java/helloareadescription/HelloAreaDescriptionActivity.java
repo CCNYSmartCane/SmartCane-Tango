@@ -120,7 +120,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private final Object mSharedLock = new Object();
 
-    private String landmarksStored;
+    private String jsonFileString;
     private String chosenLandmark;
     private float xPose = 0.0f;
     private float yPose = 0.0f;
@@ -309,8 +309,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         + "Selected ADF is "
                         + selectedUUID);
 
-                landmarksStored = "empty file";
-                landmarksStored = readFile(selectedUUID);
+                jsonFileString = "empty file";
+                jsonFileString = readFile(selectedUUID);
                 fillSavedNamesList();
             }
         }
@@ -436,7 +436,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                         getString(R.string.not_localized));
 
                                 if (mIsRelocalized) {
-//                                    mFileContentView.setText(landmarksStored);
+//                                    mFileContentView.setText(jsonFileString);
 
                                     mCurrentLocationTextView.setText(mPositionString);
                                     mZRotationTextView.setText(mZRotationString);
@@ -520,7 +520,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private void fillSavedNamesList(){
             try {
                 Log.d("Fill", "fill saved list ");
-                JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+                JSONObject JSONlandmarks = new JSONObject(jsonFileString);
                 String temp = " ";
                 waypointView.setText(String.valueOf(JSONlandmarks));
                 for (int i = 0; i < JSONlandmarks.length(); i++) {
@@ -795,37 +795,31 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     private void handlePathFinding() {
-        ArrayList<String> fullUuidList;
-        // Returns a list of ADFs with their UUIDs
-        fullUuidList = mTango.listAreaDescriptions();
-        if (fullUuidList.size() > 0) {
+        try {
+            JSONObject jsonObj = new JSONObject(jsonFileString);
+            offsetX = jsonObj.getInt("offsetX");
+            offsetY = jsonObj.getInt("offsetY");
 
-            String jsonString = readFile(fullUuidList.get(fullUuidList.size() - 1));
-            try {
-                JSONObject jsonObj = new JSONObject(jsonString);
-                offsetX = jsonObj.getInt("offsetX");
-                offsetY = jsonObj.getInt("offsetY");
+            JSONArray array = jsonObj.getJSONArray("coordinateMatrix");
 
-                JSONArray array = jsonObj.getJSONArray("coordinateMatrix");
+            int xLength = array.length();
+            int yLength = array.getJSONArray(0).length();
+            boolean[][] coordinateMatrix = new boolean[xLength][yLength];
 
-                int xLength = array.length();
-                int yLength = array.getJSONArray(0).length();
-                boolean[][] coordinateMatrix = new boolean[xLength][yLength];
-
-                for(int i=0; i<xLength; i++) {
-                    for(int j=0; j<yLength; j++) {
-                        coordinateMatrix[i][j] = Boolean.valueOf(array.getJSONArray(i).getString(j));
-                    }
+            for(int i=0; i<xLength; i++) {
+                for(int j=0; j<yLength; j++) {
+                    coordinateMatrix[i][j] = Boolean.valueOf(array.getJSONArray(i).getString(j));
                 }
-
-                PathFinder.xLength = xLength;
-                PathFinder.yLength = yLength;
-                PathFinder.coordinateMatrix = coordinateMatrix;
-
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
+
+            PathFinder.xLength = xLength;
+            PathFinder.yLength = yLength;
+            PathFinder.coordinateMatrix = coordinateMatrix;
+
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+
 
         String s = "";
         for(int i=0; i<PathFinder.xLength; i++) {
@@ -982,11 +976,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
             fullUuidList = mTango.listAreaDescriptions();
             if(fullUuidList.size() > 0) {
 
-                landmarksStored = "empty file";
+                jsonFileString = "empty file";
 
-                landmarksStored = readFile(selectedUUID);
+                jsonFileString = readFile(selectedUUID);
 
-                Log.d("landmarksStored", landmarksStored);
+                Log.d("jsonFileString", jsonFileString);
 
                 // String from file to json and then set values of translation
 
@@ -1008,7 +1002,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 String zName = zNameBuilder.toString();
 
                 try {
-                    JSONObject JSONlandmarks = new JSONObject(landmarksStored);
+                    JSONObject JSONlandmarks = new JSONObject(jsonFileString);
                     mDestinationTranslation[0] = Float.valueOf(JSONlandmarks.getString(xName));
                     mDestinationTranslation[1] = Float.valueOf(JSONlandmarks.getString(yName));
                     mDestinationTranslation[2] = Float.valueOf(JSONlandmarks.getString(zName));
