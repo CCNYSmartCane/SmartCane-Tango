@@ -68,8 +68,6 @@ public class StartActivity extends Activity {
         mIsUseAreaLearning = mLearningModeToggleButton.isChecked();
         mIsLoadAdf = mLoadAdfToggleButton.isChecked();
 
-
-
         startActivityForResult(
                 Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE), 0);
 

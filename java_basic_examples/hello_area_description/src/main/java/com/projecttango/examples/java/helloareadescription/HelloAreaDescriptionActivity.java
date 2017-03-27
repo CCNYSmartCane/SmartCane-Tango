@@ -300,6 +300,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                chosenLandmark = mDestLandmark.getText().toString();
+                mDestinationTextView.setText(chosenLandmark);
                 loadWaypoint(mIsConstantSpaceRelocalize);
             }
         });
@@ -421,6 +423,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
 
                             mIsRelocalized = true;
+                            Log.d("mIsRelocalized ", String.valueOf(mIsRelocalized));
 
                             StringBuilder stringBuilder = new StringBuilder();
 
@@ -581,7 +584,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void selectButtonClicked(){
-        loadWaypoint(mIsConstantSpaceRelocalize);
+
 
         if (mIsNavigatingMode) {
             Toast t;
@@ -602,6 +605,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 chosenLandmark = savedWaypointNames.get(chosenIndex);
                 String speakToUser = chosenLandmark + " " + "Selected";
                 ConvertTextToSpeech(speakToUser);
+                loadWaypoint(mIsConstantSpaceRelocalize);
 
             }
             if (savedWaypointNames.size() == 0) {
@@ -836,13 +840,14 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     private void handlePathFinding() {
+        Log.d("pathfinding ","started");
         // TODO: Need to remove and refactor duplicate readFile from current ADF selected
         ArrayList<String> fullUuidList;
         // Returns a list of ADFs with their UUIDs
         fullUuidList = mTango.listAreaDescriptions();
         if (fullUuidList.size() > 0) {
 
-            String jsonString = readFile(fullUuidList.get(fullUuidList.size() - 1));
+            String jsonString = readFile(selectedUUID);
             try {
                 JSONObject jsonObj = new JSONObject(jsonString);
                 offsetX = jsonObj.getInt("offsetX");
@@ -1016,7 +1021,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     public void loadWaypoint(boolean isLoadAdf) {
         if (isLoadAdf) {
-            chosenLandmark = mDestLandmark.getText().toString();
+            //chosenLandmark = mDestLandmark.getText().toString();
             // Load saved landmarks and
 
             ArrayList<String> fullUuidList;
@@ -1038,7 +1043,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
                 // Get pose from first landmark saved (for now)
-
 
                 //String lastLandmark = landmarkName.get(landmarkName.size()-1);
                 StringBuilder xNameBuilder = new StringBuilder();
@@ -1062,11 +1066,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+
+                if (mIsRelocalized) {
+                    Log.d("pathfinding","starting");
+                    handlePathFinding();
+                }
+                else
+                    Log.d("mIsRelocalized",String.valueOf(mIsRelocalized));
             }
 
-            if (mIsRelocalized) {
-                handlePathFinding();
-            }
         }
     }
 
