@@ -35,4 +35,8 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
 dependencies {
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
     compile 'com.android.support:appcompat-v7:19.1.0'
+    compile 'com.android.support:appcompat-v7:19.1.0'
+    compile 'com.fasterxml.jackson.core:jackson-core:2.7.3'
+    compile 'com.fasterxml.jackson.core:jackson-annotations:2.7.3'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.3'
 }

@@ -888,7 +888,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             ArrayList<String> fullUuidList;
             // Returns a list of ADFs with their UUIDs
             fullUuidList = mTango.listAreaDescriptions();
-            if(fullUuidList.size() > 0) {
+            if (fullUuidList.size() > 0) {
 
                 jsonFileString = "empty file";
                 jsonFileString = readFile(selectedUUID);
@@ -916,12 +916,13 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 }
 
                 if (mIsRelocalized) {
-                    Log.d("pathfinding","starting");
+                    Log.d("pathfinding", "starting");
                     handlePathFinding();
-                }
-                else
-                    Log.d("mIsRelocalized",String.valueOf(mIsRelocalized));
+                } else
+                    Log.d("mIsRelocalized", String.valueOf(mIsRelocalized));
             }
+        }
+    }
 
     private void storeValuesToJSON(String fileName) {
         try {
