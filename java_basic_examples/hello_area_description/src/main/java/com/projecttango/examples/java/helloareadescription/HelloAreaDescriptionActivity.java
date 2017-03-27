@@ -266,7 +266,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                selectButtonClicked();
+                chosenLandmark = mDestLandmark.getText().toString();
+                loadWaypoint(mIsConstantSpaceRelocalize);
             }
         });
 
@@ -288,10 +289,17 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         });
 
-        if (isLoadAdf && !isLearningMode) {
+        if(isLoadAdf) {
             mSaveLandButton.setVisibility(View.GONE);
             mLandmarkName.setVisibility(View.GONE);
-            mSaveAdfButton.setVisibility(View.GONE);
+
+            if (isLearningMode) {
+                // Disable save ADF button until Tango relocalizes to the current ADF.
+                mSaveAdfButton.setEnabled(false);
+            } else {
+                // Hide to save ADF button if learning mode is off.
+                mSaveAdfButton.setVisibility(View.GONE);
+            }
 
             ArrayList<String> fullUuidList;
             // Returns a list of ADFs with their UUIDs
@@ -307,16 +315,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 jsonFileString = readFile(selectedUUID);
                 fillSavedNamesList();
             }
-
-        } else if (!isLoadAdf && isLearningMode) {
-            mChooseLandButton.setVisibility(View.GONE);
-            mDestLandmark.setVisibility(View.GONE);
-            mLandMarkTextView.setVisibility(View.GONE);
-            mJSONTextView.setVisibility(View.GONE);
         }
     }
-
-
 
     /**
      * Sets up the tango configuration object. Make sure mTango object is initialized before
@@ -555,13 +555,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
             t.show();
         } else {
-            loadWaypoint(mIsConstantSpaceRelocalize);
-
             if (savedWaypointNames.size() != 0) {
                 Log.d("Select again", "Select clicked after");
                 chosenLandmark = savedWaypointNames.get(chosenIndex);
                 String speakToUser = chosenLandmark + " " + "Selected";
                 ConvertTextToSpeech(speakToUser);
+                loadWaypoint(mIsConstantSpaceRelocalize);
 
             }
             if (savedWaypointNames.size() == 0) {
@@ -811,7 +810,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
             e.printStackTrace();
         }
 
-
         String s = "";
         for(int i=0; i<PathFinder.xLength; i++) {
             for(int j=0; j<PathFinder.yLength; j++) {
@@ -888,7 +886,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 ", " + String.valueOf((nextWaypoint.getY()-offsetY)*granularity));
         mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
 
-
         // Calculate the necessary rotation difference
         float rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator-1];
 
@@ -959,7 +956,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     public void loadWaypoint(boolean isLoadAdf) {
         if (isLoadAdf) {
-            chosenLandmark = mDestLandmark.getText().toString();
             // Load saved landmarks and
 
             ArrayList<String> fullUuidList;
@@ -977,7 +973,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                 // Get pose from first landmark saved (for now)
 
-
                 //String lastLandmark = landmarkName.get(landmarkName.size()-1);
                 String xName = (chosenLandmark + "_x");
                 String yName = (chosenLandmark + "_y");
@@ -992,11 +987,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+
+                if (mIsRelocalized) {
+                    Log.d("pathfinding","starting");
+                    handlePathFinding();
+                }
+                else
+                    Log.d("mIsRelocalized",String.valueOf(mIsRelocalized));
             }
 
-            if (mIsRelocalized) {
-                handlePathFinding();
-            }
         }
     }
 
