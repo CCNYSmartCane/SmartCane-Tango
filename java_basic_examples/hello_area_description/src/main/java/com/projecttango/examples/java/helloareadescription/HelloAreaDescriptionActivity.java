@@ -253,6 +253,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
         myReceiver = null;
     }
 
+//    @Override
+//    protected void onDestroy() {
+//        Log.i("Matrix", "onDestroy");
+//        if(mIsNavigatingMode) {
+//            cancelNavigating();
+//        }
+//        super.onDestroy();
+//    }
+
     /**
      * Sets Texts views to display statistics of Poses being received. This also sets the buttons
      * used in the UI. Please note that this needs to be called after TangoService and Config
@@ -301,10 +310,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         });
 
-        if (isLoadAdf && !isLearningMode) {
-            mSaveLandButton.setVisibility(View.GONE);
-            mLandmarkName.setVisibility(View.GONE);
-
+        if (isLoadAdf) {
             if (isLearningMode) {
                 // Disable save ADF button until Tango relocalizes to the current ADF.
                 mSaveAdfButton.setEnabled(false);
@@ -329,11 +335,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
 
             printMatrix();
-        } else if (!isLoadAdf && isLearningMode) {
-            mChooseLandButton.setVisibility(View.GONE);
-            mDestLandmark.setVisibility(View.GONE);
-            mLandMarkTextView.setVisibility(View.GONE);
-            mJSONTextView.setVisibility(View.GONE);
         }
     }
 
@@ -416,9 +417,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
                             mPositionString = "X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2];
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
 
-                            if (mIsLearningMode) { // Record coordinates for grid
+//                            if (mIsLearningMode) { // Record coordinates for grid
                                 updateCoordinates();
-                            }
+//                            }
                         } else {
                             mIsRelocalized = false;
                         }
@@ -602,11 +603,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void upButtonClicked(){
         if(savedWaypointNames.size() != 0) {
-            if (chosenIndex == 0) {
-                chosenIndex = savedWaypointNames.size() - 1;
-            } else {
-                chosenIndex--;
-            }
+            chosenIndex = (chosenIndex - 1) % savedWaypointNames.size();
 
             String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
             ConvertTextToSpeech(speakToUser);
@@ -615,11 +612,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void downButtonClicked(){
         if(savedWaypointNames.size() != 0) {
-            if (chosenIndex == savedWaypointNames.size() - 1) {
-                chosenIndex = 0;
-            } else {
-                chosenIndex++;
-            }
+            chosenIndex = (chosenIndex + 1) % savedWaypointNames.size();
+
             String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
             ConvertTextToSpeech(speakToUser);
         }
@@ -1040,4 +1034,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
         Log.i("Matrix", s);
     }
+//
+//    public void cancelNavigating() {
+//        mIsNavigatingMode = false;
+//        storeValuesToJSON(selectedUUID);
+//    }
 }
