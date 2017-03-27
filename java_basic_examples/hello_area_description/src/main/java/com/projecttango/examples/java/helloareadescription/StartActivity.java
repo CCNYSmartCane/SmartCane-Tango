@@ -88,8 +88,7 @@ public class StartActivity extends Activity {
      * */
     public void loadAdfClicked(View v) {
         mIsLoadAdf = mLoadAdfToggleButton.isChecked();
-        mStartButton.setEnabled(!mIsLoadAdf);
-
+//        mStartButton.setEnabled(!mIsLoadAdf);
     }
 
     /**

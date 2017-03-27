@@ -1,49 +1,57 @@
 package com.projecttango.examples.java.helloareadescription;
 
-class Node {
-    private int x;
-    private int y;
-    private Node prev;
-    private int gScore;
-    private int fScore;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-    Node(int x, int y) {
+/**
+ * Created by ChrisYang on 3/1/17.
+ */
+
+class Node {
+    private float x;
+    private float y;
+    private Node prev;
+    private float gScore;
+    private float fScore;
+
+    @JsonCreator
+    public Node(@JsonProperty("x")float x, @JsonProperty("y")float y) {
         this.x = x;
         this.y = y;
         this.prev = null;
-        this.gScore = Integer.MAX_VALUE;
-        this.fScore = Integer.MAX_VALUE;
+        this.gScore = Float.MAX_VALUE;
+        this.fScore = Float.MAX_VALUE;
     }
 
-    int getX() {
+    public float getX() {
         return x;
     }
 
-    int getY() {
+    public float getY() {
         return y;
     }
 
-    Node getPrev() {
+    public Node getPrev() {
         return prev;
     }
 
-    void setPrev(Node prev) {
+    public void setPrev(Node prev) {
         this.prev = prev;
     }
 
-    int getgScore() {
+    public float getgScore() {
         return gScore;
     }
 
-    void setgScore(int gScore) {
+    public void setgScore(float gScore) {
         this.gScore = gScore;
     }
 
-    int getfScore() {
+    public float getfScore() {
         return fScore;
     }
 
-    void setfScore(int fScore) {
+    public void setfScore(float fScore) {
         this.fScore = fScore;
     }
 
@@ -56,13 +64,16 @@ class Node {
 
         Node node = (Node) o;
 
-        return this.x == node.x && this.y == node.y;
+        if (Float.compare(node.x, x) != 0)
+            return false;
+        return Float.compare(node.y, y) == 0;
+
     }
 
     @Override
     public int hashCode() {
-        int result = x;
-        result = 31 * result + y;
+        int result = (x != +0.0f ? Float.floatToIntBits(x) : 0);
+        result = 31 * result + (y != +0.0f ? Float.floatToIntBits(y) : 0);
         return result;
     }
 }
