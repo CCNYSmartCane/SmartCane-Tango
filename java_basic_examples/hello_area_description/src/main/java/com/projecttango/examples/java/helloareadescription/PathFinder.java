@@ -29,7 +29,8 @@ class PathFinder {
             if (current.equals(goal)) {
                 totalPath = reconstructPath(current);
                 if(totalPath.size() > 2) {
-                    squashedPath = DouglasPeucker(totalPath, 1.5/granularity); // 1.5 meter threshold
+                    double meterThreshold = 0.25;
+                    squashedPath = DouglasPeucker(totalPath, meterThreshold/granularity);
                 } else {
                     squashedPath = totalPath;
                 }
