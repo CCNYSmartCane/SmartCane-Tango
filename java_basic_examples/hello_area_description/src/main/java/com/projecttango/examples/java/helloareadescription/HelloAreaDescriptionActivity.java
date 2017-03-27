@@ -78,6 +78,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private static final int SECS_TO_MILLISECS = 1000;
     private Tango mTango;
     private TangoConfig mConfig;
+
     private TextView mUuidTextView;
     private TextView mRelocalizationTextView;
     private TextView mCurrentLocationTextView;
@@ -86,6 +87,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private TextView mNextWaypointTextView;
     private TextView mDestinationTextView;
     private TextView mReachedDestinationTextView;
+    private TextView mLandMarkTextView;
+    private TextView mJSONTextView;
 
     private Button mSaveAdfButton;
     private Button mSaveLandButton;
@@ -98,7 +101,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private ArrayList<TangoPoseData> landmarkList = new ArrayList<TangoPoseData>();
     private ArrayList<String> landmarkName = new ArrayList<String>();
-    private ArrayList<String> adfName = new ArrayList<String>();
     private TangoPoseData currentPose;
     private ArrayList<String> savedWaypointNames = new ArrayList<String>();
 
@@ -122,15 +124,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private String jsonFileString;
     private String chosenLandmark;
-    private float xPose = 0.0f;
-    private float yPose = 0.0f;
-    private float zPose = 0.0f;
 
-    private Set<Node> coordinateSet = new HashSet<Node>();
-    private float maxX = 0;
-    private float minX = 0;
-    private float maxY = 0;
-    private float minY = 0;
+    private Set coordinateSet = new HashSet<Node>();
+    private float maxX = 0f;
+    private float minX = 0f;
+    private float maxY = 0f;
+    private float minY = 0f;
     private int offsetX = 0;
     private int offsetY = 0;
 
@@ -148,8 +147,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private ListView listView;
 
-    private TextView waypointView;
     private float mRotationDiff;
+
+    private final float granularity = 0.5f;
 
 
     @Override
@@ -256,16 +256,17 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mNextRotationTextView = (TextView) findViewById(R.id.next_rotation_textview);
         mNextWaypointTextView = (TextView) findViewById(R.id.next_waypoint_textview);
         mReachedDestinationTextView = (TextView) findViewById(R.id.reached_destination_textview);
+        mLandMarkTextView = (TextView) findViewById(R.id.landMarkTextView);
         mSaveLandButton = (Button) findViewById(R.id.land_button);
         mLandmarkName = (EditText) findViewById(R.id.landmarkName);
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
         mChooseLandButton = (Button) findViewById(R.id.chooseLandButton);
-        waypointView = (TextView) findViewById(R.id.waypointView);
+        mJSONTextView = (TextView) findViewById(R.id.JSONView);
 
         mChooseLandButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                loadWaypoint(mIsConstantSpaceRelocalize);
+                selectButtonClicked();
             }
         });
 
@@ -287,17 +288,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         });
 
-        if(isLoadAdf) {
+        if (isLoadAdf && !isLearningMode) {
             mSaveLandButton.setVisibility(View.GONE);
             mLandmarkName.setVisibility(View.GONE);
-
-            if (isLearningMode) {
-                // Disable save ADF button until Tango relocalizes to the current ADF.
-                mSaveAdfButton.setEnabled(false);
-            } else {
-                // Hide to save ADF button if learning mode is off.
-                mSaveAdfButton.setVisibility(View.GONE);
-            }
+            mSaveAdfButton.setVisibility(View.GONE);
 
             ArrayList<String> fullUuidList;
             // Returns a list of ADFs with their UUIDs
@@ -313,8 +307,16 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 jsonFileString = readFile(selectedUUID);
                 fillSavedNamesList();
             }
+
+        } else if (!isLoadAdf && isLearningMode) {
+            mChooseLandButton.setVisibility(View.GONE);
+            mDestLandmark.setVisibility(View.GONE);
+            mLandMarkTextView.setVisibility(View.GONE);
+            mJSONTextView.setVisibility(View.GONE);
         }
     }
+
+
 
     /**
      * Sets up the tango configuration object. Make sure mTango object is initialized before
@@ -387,13 +389,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                             mIsRelocalized = true;
 
-                            StringBuilder stringBuilder = new StringBuilder();
-
                             translation = pose.getTranslationAsFloats();
                             orientation = pose.getRotationAsFloats();
 
-                            stringBuilder.append("X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2]);
-                            mPositionString = stringBuilder.toString();
+                            mPositionString = "X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2];
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
 
                             if (mIsLearningMode) { // Record coordinates for grid
@@ -406,7 +405,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                 if(y > maxY) {maxY = y;}
                                 if(y < minY) {minY = y;}
 
-                                coordinateSet.add(new Node((int)(x*2), (int)(y*2)));
+                                coordinateSet.add(new Node((int)(x/granularity), (int)(y/granularity)));
                             }
                         } else {
                             mIsRelocalized = false;
@@ -455,8 +454,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                                     if (mIsNavigatingMode) {
                                         Node nextWaypoint = squashedPath.get(waypointIterator);
-                                        if (roundToNearestHalf(translation[0]) == (nextWaypoint.getX()-offsetX)/2.0
-                                                && roundToNearestHalf(translation[1]) == (nextWaypoint.getY()-offsetY)/2.0) {
+                                        if (roundToNearestHalf(translation[0]) == (nextWaypoint.getX()-offsetX)*granularity
+                                                && roundToNearestHalf(translation[1]) == (nextWaypoint.getY()-offsetY)*granularity) {
 
                                             // Made it to the nextWaypoint
                                             updateWaypoint();
@@ -518,24 +517,26 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void fillSavedNamesList(){
-            try {
-                Log.d("Fill", "fill saved list ");
-                JSONObject JSONlandmarks = new JSONObject(jsonFileString);
-                String temp = " ";
-                waypointView.setText(String.valueOf(JSONlandmarks));
-                for (int i = 0; i < JSONlandmarks.length(); i++) {
-                    String tempName = JSONlandmarks.getString(String.valueOf(i));
-                    savedWaypointNames.add(tempName);
-                    Log.d("savedwaypoints",tempName);
-                }
-                waypointView.setText(temp);
-                ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                        android.R.layout.simple_list_item_1, android.R.id.text1, savedWaypointNames);
-                listView.setAdapter(adapter);
+        try {
+            Log.d("Fill", "fill saved list ");
+            JSONObject jsonObj = new JSONObject(jsonFileString);
 
-            } catch (JSONException e) {
-                e.printStackTrace();
+            mJSONTextView.setText(String.valueOf(jsonObj));
+            Log.i("JSON", String.valueOf(jsonObj));
+
+            for (int i = 0; i < jsonObj.length(); i++) {
+                String key = jsonObj.getString(String.valueOf(i));
+                savedWaypointNames.add(key);
+                Log.d("savedwaypoints",key);
             }
+
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                    android.R.layout.simple_list_item_1, android.R.id.text1, savedWaypointNames);
+            listView.setAdapter(adapter);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -596,7 +597,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private String readFile(String adfId){
-
         StringBuilder finalString = new StringBuilder();
 
         try {
@@ -620,9 +620,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         }
 
-        String landmarkString = finalString.toString();
-
-        return landmarkString;
+        return finalString.toString();
     }
 
     private void saveLandmarks(String id) {
@@ -636,17 +634,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         JSONObject jsonObj = new JSONObject();
 
         for (int i = 0; i < size; i++) {
-            StringBuilder xNameBuilder = new StringBuilder();
-            StringBuilder yNameBuilder = new StringBuilder();
-            StringBuilder zNameBuilder = new StringBuilder();
-
-            xNameBuilder.append(landmarkName.get(i) + "_x");
-            yNameBuilder.append(landmarkName.get(i) + "_y");
-            zNameBuilder.append(landmarkName.get(i) + "_z");
-
-            String xName = xNameBuilder.toString();
-            String yName = yNameBuilder.toString();
-            String zName = zNameBuilder.toString();
+            String xName = (landmarkName.get(i) + "_x");
+            String yName = (landmarkName.get(i) + "_y");
+            String zName = (landmarkName.get(i) + "_z");
 
             float translationStored[] = landmarkList.get(i).getTranslationAsFloats();
             String xPose = Float.toString(translationStored[0]);
@@ -665,14 +655,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
 
         // Create a file in the Internal Storage
-        String fileName = id; //name file with uuid
         String content = jsonObj.toString();
         Log.d("content", content);
-        Log.d("filename", fileName);
+        Log.d("filename", id);
 
-        FileOutputStream outputStream = null;
         try {
-            outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
+            FileOutputStream outputStream = openFileOutput(id, Context.MODE_PRIVATE);
             outputStream.write(content.getBytes());
             outputStream.close();
         } catch (Exception e) {
@@ -769,9 +757,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         boolean[][] coordinateMatrix = new boolean[xLength][yLength];
 
-        for(Node n: coordinateSet) {
-            coordinateMatrix[n.getX()+offsetX][n.getY()+offsetY] = true;
+        for (Object aCoordinateSet : coordinateSet) {
+            Node n = (Node) aCoordinateSet;
+            coordinateMatrix[n.getX() + offsetX][n.getY() + offsetY] = true;
         }
+
 
         JSONObject jsonObj = null;
         try {
@@ -815,6 +805,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             PathFinder.xLength = xLength;
             PathFinder.yLength = yLength;
             PathFinder.coordinateMatrix = coordinateMatrix;
+            PathFinder.granularity = granularity;
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -847,13 +838,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
             String path = "";
             for(int i=0; i<PathFinder.squashedPath.size(); i++) {
                 // Remove offset and get real world coordinates
-                path += String.valueOf((PathFinder.squashedPath.get(i).getX()-offsetX)/2.0) + ", " + String.valueOf((PathFinder.squashedPath.get(i).getY()-offsetY)/2.0) + "\n";
+                path += String.valueOf((PathFinder.squashedPath.get(i).getX()-offsetX)*granularity) +
+                        ", " + String.valueOf((PathFinder.squashedPath.get(i).getY()-offsetY)*granularity) + "\n";
             }
 
             Toast t2 = Toast.makeText(getApplicationContext(), path, Toast.LENGTH_LONG);
             t2.show();
-
-            Log.i("PathFinder", "SquashedPath: " + path);
 
             squashedPath = PathFinder.squashedPath;
             getRotationsArray(squashedPath);
@@ -894,9 +884,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         Node nextWaypoint = squashedPath.get(waypointIterator);
 
-        mNextWaypointTextView.setText(String.valueOf((nextWaypoint.getX()-offsetX)/2.0) +
-                ", " + String.valueOf((nextWaypoint.getY()-offsetY)/2.0));
+        mNextWaypointTextView.setText(String.valueOf((nextWaypoint.getX()-offsetX)*granularity) +
+                ", " + String.valueOf((nextWaypoint.getY()-offsetY)*granularity));
         mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
+
 
         // Calculate the necessary rotation difference
         float rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator-1];
@@ -977,7 +968,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
             if(fullUuidList.size() > 0) {
 
                 jsonFileString = "empty file";
-
                 jsonFileString = readFile(selectedUUID);
 
                 Log.d("jsonFileString", jsonFileString);
@@ -989,23 +979,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
                 //String lastLandmark = landmarkName.get(landmarkName.size()-1);
-                StringBuilder xNameBuilder = new StringBuilder();
-                StringBuilder yNameBuilder = new StringBuilder();
-                StringBuilder zNameBuilder = new StringBuilder();
-
-                xNameBuilder.append(chosenLandmark + "_x");
-                yNameBuilder.append(chosenLandmark + "_y");
-                zNameBuilder.append(chosenLandmark + "_z");
-
-                String xName = xNameBuilder.toString();
-                String yName = yNameBuilder.toString();
-                String zName = zNameBuilder.toString();
+                String xName = (chosenLandmark + "_x");
+                String yName = (chosenLandmark + "_y");
+                String zName = (chosenLandmark + "_z");
 
                 try {
-                    JSONObject JSONlandmarks = new JSONObject(jsonFileString);
-                    mDestinationTranslation[0] = Float.valueOf(JSONlandmarks.getString(xName));
-                    mDestinationTranslation[1] = Float.valueOf(JSONlandmarks.getString(yName));
-                    mDestinationTranslation[2] = Float.valueOf(JSONlandmarks.getString(zName));
+                    JSONObject jsonObj = new JSONObject(jsonFileString);
+                    mDestinationTranslation[0] = Float.valueOf(jsonObj.getString(xName));
+                    mDestinationTranslation[1] = Float.valueOf(jsonObj.getString(yName));
+                    mDestinationTranslation[2] = Float.valueOf(jsonObj.getString(zName));
                     mDestinationTextView.setText("X:" + mDestinationTranslation[0] + ", Y:" + mDestinationTranslation[1] + ", Z:" + mDestinationTranslation[2]);
                 } catch (JSONException e) {
                     e.printStackTrace();

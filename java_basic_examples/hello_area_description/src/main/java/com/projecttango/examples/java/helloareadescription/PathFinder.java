@@ -1,9 +1,5 @@
 package com.projecttango.examples.java.helloareadescription;
 
-/**
- * Created by ChrisYang on 3/2/17.
- */
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,10 +10,11 @@ class PathFinder {
     static int xLength;
     static int yLength;
     static boolean[][] coordinateMatrix;
-    static List<Node> totalPath;
+    private static List<Node> totalPath;
     static List<Node> squashedPath;
+    static float granularity;
 
-    public static boolean pathfind(Node start, Node goal) {
+    static boolean pathfind(Node start, Node goal) {
         List<Node> closedList = new ArrayList<Node>();
         Queue<Node> openList = new PriorityQueue<Node>(11, new ComparatorfScore());
 
@@ -32,7 +29,7 @@ class PathFinder {
             if (current.equals(goal)) {
                 totalPath = reconstructPath(current);
                 if(totalPath.size() > 2) {
-                    squashedPath = DouglasPeucker(totalPath, 2.0); // Since this is in 0.5 meters, then 2.0 -> 1.0 meter
+                    squashedPath = DouglasPeucker(totalPath, 1.5/granularity); // 1.5 meter threshold
                 } else {
                     squashedPath = totalPath;
                 }

@@ -1,9 +1,5 @@
 package com.projecttango.examples.java.helloareadescription;
 
-/**
- * Created by ChrisYang on 3/1/17.
- */
-
 class Node {
     private int x;
     private int y;
@@ -11,7 +7,7 @@ class Node {
     private int gScore;
     private int fScore;
 
-    public Node(int x, int y) {
+    Node(int x, int y) {
         this.x = x;
         this.y = y;
         this.prev = null;
@@ -19,35 +15,35 @@ class Node {
         this.fScore = Integer.MAX_VALUE;
     }
 
-    public int getX() {
+    int getX() {
         return x;
     }
 
-    public int getY() {
+    int getY() {
         return y;
     }
 
-    public Node getPrev() {
+    Node getPrev() {
         return prev;
     }
 
-    public void setPrev(Node prev) {
+    void setPrev(Node prev) {
         this.prev = prev;
     }
 
-    public int getgScore() {
+    int getgScore() {
         return gScore;
     }
 
-    public void setgScore(int gScore) {
+    void setgScore(int gScore) {
         this.gScore = gScore;
     }
 
-    public int getfScore() {
+    int getfScore() {
         return fScore;
     }
 
-    public void setfScore(int fScore) {
+    void setfScore(int fScore) {
         this.fScore = fScore;
     }
 
@@ -64,7 +60,9 @@ class Node {
     }
 
     @Override
-    public String toString(){
-        return String.valueOf(x) + ", " + String.valueOf(y);
+    public int hashCode() {
+        int result = x;
+        result = 31 * result + y;
+        return result;
     }
 }

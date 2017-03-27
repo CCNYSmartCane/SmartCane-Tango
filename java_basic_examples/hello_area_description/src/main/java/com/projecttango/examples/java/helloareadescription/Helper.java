@@ -1,11 +1,7 @@
 package com.projecttango.examples.java.helloareadescription;
 
-/**
- * Created by ChrisYang on 3/8/17.
- */
-
-public class Helper {
-    public static double getEulerAngleZ(float[] quaternion)
+class Helper {
+    static double getEulerAngleZ(float[] quaternion)
     {
         float x = quaternion[0];
         float y = quaternion[1];
@@ -20,7 +16,7 @@ public class Helper {
         return (Math.toDegrees(Math.atan2(t1, t2)) + 450) % 360;
     }
 
-    public static float roundToNearestHalf(float f) {
+    static float roundToNearestHalf(float f) {
         return ((float)Math.round(f*2))/2;
     }
 }
