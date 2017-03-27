@@ -22,7 +22,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Path;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.content.LocalBroadcastManager;
@@ -62,12 +61,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 import static com.projecttango.examples.java.helloareadescription.Helper.getEulerAngleZ;
@@ -168,7 +164,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private float mRotationDiff;
 
     private float granularity = 0.5f;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -995,20 +990,29 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     public void loadValuesFromJson() {
         try {
-//            adjacencyList = new ObjectMapper().readValue(jsonFileString, new TypeReference<Map<Node, List<Node>>>() {});
-
-            JSONObject jsonObj = new JSONObject(readFile(jsonFileString));
-            coordinateSet = (Set<Node>)jsonObj.get("coordinateSet");
+            JSONObject jsonObj = new JSONObject(jsonFileString);
+            coordinateSet = new ObjectMapper().readValue(jsonObj.getString("coordinateSet"), new TypeReference<Set<Node>>(){});
             maxX = (float)jsonObj.getDouble("maxX");
             maxY = (float)jsonObj.getDouble("maxY");
             minX = (float)jsonObj.getDouble("minX");
-            minY = (float)jsonObj.getDouble("mixY");
+            minY = (float)jsonObj.getDouble("minY");
         } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (JsonParseException e) {
+            Log.i("Matrix", e.getMessage());
+            e.printStackTrace();
+        } catch (JsonMappingException e) {
+            Log.i("Matrix", e.getMessage());
+
+            e.printStackTrace();
+        } catch (IOException e) {
+            Log.i("Matrix", e.getMessage());
+
             e.printStackTrace();
         }
     }
 
-    public void printMatrix() {
+    public void printMatrix()  {
         loadValuesFromJson();
 
         int xLength = (int)((maxX - minX)/granularity) + 1;
@@ -1019,7 +1023,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         boolean[][] coordinateMatrix = new boolean[xLength][yLength];
 
-        for (Node current : (Iterable<Node>) coordinateSet) {
+        for (Object coordinate : coordinateSet) {
+            Node current = (Node) coordinate;
             coordinateMatrix[(int) (current.getX() / granularity) + offsetX][(int) (current.getY() / granularity) + offsetY] = true;
         }
 

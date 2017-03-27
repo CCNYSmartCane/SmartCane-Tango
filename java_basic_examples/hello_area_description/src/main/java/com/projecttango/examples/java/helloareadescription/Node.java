@@ -1,5 +1,8 @@
 package com.projecttango.examples.java.helloareadescription;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Created by ChrisYang on 3/1/17.
  */
@@ -11,7 +14,8 @@ class Node {
     private float gScore;
     private float fScore;
 
-    public Node(float x, float y) {
+    @JsonCreator
+    public Node(@JsonProperty("x")float x, @JsonProperty("y")float y) {
         this.x = x;
         this.y = y;
         this.prev = null;
