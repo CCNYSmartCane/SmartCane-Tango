@@ -161,7 +161,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         mIsLearningMode = intent.getBooleanExtra(AdfUuidListViewActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(AdfUuidListViewActivity.LOAD_ADF, false);
-        mTts =new TextToSpeech(HelloAreaDescriptionActivity.this, this);
+        mTts = new TextToSpeech(HelloAreaDescriptionActivity.this, this);
 
         selectedUUID = getIntent().getExtras().getString("uuidName");
         String toastMessage = "Selected map: " + selectedUUID + "loaded";
@@ -236,10 +236,20 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         }
 
-        if(myReceiver != null)
+        if (myReceiver != null)
             LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
         myReceiver = null;
     }
+
+//    @Override
+//    protected void onDestroy() {
+//        if (mIsNavigatingMode) {
+//            mIsNavigatingMode = false;
+//            storeValuesToJSON(selectedUUID);
+//        }
+//
+//        super.onDestroy();
+//    }
 
     /**
      * Sets Texts views to display statistics of Poses being received. This also sets the buttons
@@ -290,7 +300,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         });
 
-        if(isLoadAdf) {
+        if (isLoadAdf) {
             mSaveLandButton.setVisibility(View.GONE);
             mLandmarkName.setVisibility(View.GONE);
 
@@ -317,6 +327,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 fillSavedNamesList();
             }
 
+            loadValuesFromJson();
             printMatrix();
         }
     }
@@ -341,11 +352,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
             fullUuidList = tango.listAreaDescriptions();
             // Load the latest ADF if ADFs are found.
             if (fullUuidList.size() > 0) {
-                if(selectedUUID == null) {
+                if (selectedUUID == null) {
                     config.putString(TangoConfig.KEY_STRING_AREADESCRIPTION,
                             fullUuidList.get(fullUuidList.size() - 1));
-                }
-                else{
+                } else {
                     config.putString(TangoConfig.KEY_STRING_AREADESCRIPTION,
                             selectedUUID);
                 }
@@ -397,8 +407,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                             mPositionString = "X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2];
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
-                            
-							updateCoordinates();
+
+                            updateCoordinates();
                         } else {
                             mIsRelocalized = false;
                         }
@@ -427,7 +437,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                         getString(R.string.not_localized));
 
                                 if (mIsRelocalized) {
-//                                    mFileContentView.setText(jsonFileString);
+                                    mJSONTextView.setText(jsonFileString);
 
                                     mCurrentLocationTextView.setText(mPositionString);
                                     mZRotationTextView.setText(mZRotationString);
@@ -442,7 +452,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                                     mReachedDestinationTextView.setText(String.valueOf((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
                                             (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
-                                            (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z )));
+                                            (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z)));
 
                                     if (mIsNavigatingMode) {
                                         Node nextWaypoint = squashedPath.get(waypointIterator);
@@ -486,43 +496,50 @@ public class HelloAreaDescriptionActivity extends Activity implements
         float y = roundToNearestHalf(translation[1]);
 
         // Set the min and max to find the length of grid
-        if(x > maxX) {maxX = x;}
-        if(x < minX) {minX = x;}
-        if(y > maxY) {maxY = y;}
-        if(y < minY) {minY = y;}
+        if (x > maxX) {
+            maxX = x;
+        }
+        if (x < minX) {
+            minX = x;
+        }
+        if (y > maxY) {
+            maxY = y;
+        }
+        if (y < minY) {
+            minY = y;
+        }
 
         Node currentNode = new Node(x, y);
 
         coordinateSet.add(currentNode);
     }
 
-    private void processArduinoValues(String arduinoSent){
+    private void processArduinoValues(String arduinoSent) {
 
         Log.d("select", "processCalled");
 
-        Log.d("arduinosent",arduinoSent);
+        Log.d("arduinosent", arduinoSent);
 
-        if(arduinoSent.equals("1")){
+        if (arduinoSent.equals("1")) {
             // Select is clicked
-            Log.d("selectclick","1 clicked");
+            Log.d("selectclick", "1 clicked");
             selectButtonClicked();
         }
-        if(arduinoSent.equals("2")){
+        if (arduinoSent.equals("2")) {
             // Up is clicked
             upButtonClicked();
         }
-        if(arduinoSent.equals("3")){
+        if (arduinoSent.equals("3")) {
             // Down is clicked
             downButtonClicked();
         }
-        if(arduinoSent.equals("Rotation finished")) {
+        if (arduinoSent.equals("Rotation finished")) {
             ConvertTextToSpeech(arduinoSent + ", walk forward");
         }
     }
 
 
-
-    private void fillSavedNamesList(){
+    private void fillSavedNamesList() {
         try {
             Log.d("Fill", "fill saved list ");
             JSONObject jsonObj = new JSONObject(jsonFileString);
@@ -533,7 +550,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             for (int i = 0; i < jsonObj.length(); i++) {
                 String key = jsonObj.getString(String.valueOf(i));
                 savedWaypointNames.add(key);
-                Log.d("savedwaypoints",key);
+                Log.d("savedwaypoints", key);
             }
 
             ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
@@ -546,18 +563,18 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
 
-    private void selectButtonClicked(){
+    private void selectButtonClicked() {
         if (mIsNavigatingMode) {
             Toast t;
             if (mRotationDiff > 0) {
                 // rotate counterclockwise or turn left
                 t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(mRotationDiff) + "(Counter-clockwise)", Toast.LENGTH_LONG);
-                ConvertTextToSpeech("Rotate left " + (int)mRotationDiff + "degrees");
+                ConvertTextToSpeech("Rotate left " + (int) mRotationDiff + "degrees");
 
             } else {
                 // rotate clockwise or turn right
                 t = Toast.makeText(getApplicationContext(), "Rotate " + String.valueOf(mRotationDiff) + "(Clockwise)", Toast.LENGTH_LONG);
-                ConvertTextToSpeech("Rotate right " + (int)Math.abs(mRotationDiff) + "degrees");
+                ConvertTextToSpeech("Rotate right " + (int) Math.abs(mRotationDiff) + "degrees");
             }
             t.show();
         } else {
@@ -575,18 +592,27 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
     }
 
-    private void upButtonClicked(){
-        if(savedWaypointNames.size() != 0) {
-            chosenIndex = (chosenIndex - 1) % savedWaypointNames.size();
+    private void upButtonClicked() {
+        if (savedWaypointNames.size() != 0) {
+            if (chosenIndex == 0) {
+                chosenIndex = savedWaypointNames.size() - 1;
+            } else {
+                chosenIndex--;
+            }
 
             String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
             ConvertTextToSpeech(speakToUser);
         }
     }
 
-    private void downButtonClicked(){
-        if(savedWaypointNames.size() != 0) {
-            chosenIndex = (chosenIndex + 1) % savedWaypointNames.size();
+    private void downButtonClicked() {
+        if (savedWaypointNames.size() != 0) {
+            if (chosenIndex == 0) {
+                chosenIndex = savedWaypointNames.size() - 1;
+            } else {
+                chosenIndex++;
+            }
+
 
             String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
             ConvertTextToSpeech(speakToUser);
@@ -594,7 +620,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
 
-    private String readFile(String adfId){
+    private String readFile(String adfId) {
         StringBuilder finalString = new StringBuilder();
 
         try {
@@ -612,7 +638,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             inStream.close();
             inputStreamReader.close();
 
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
 
 
@@ -643,10 +669,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
             try {
-                jsonObj.put(xName,xPose);
-                jsonObj.put(yName,yPose);
-                jsonObj.put(zName,zPose);
-                jsonObj.put(String.valueOf(i),landmarkName.get(i));
+                jsonObj.put(xName, xPose);
+                jsonObj.put(yName, yPose);
+                jsonObj.put(zName, zPose);
+                jsonObj.put(String.valueOf(i), landmarkName.get(i));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -749,20 +775,19 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void handlePathFinding() {
-        // TODO: Need to remove and refactor duplicate readFile from current ADF selected
-        loadValuesFromJson();
+//        loadValuesFromJson();
         PathFinder.coordinateSet = coordinateSet;
         PathFinder.granularity = granularity;
 
         Node start = new Node(roundToNearestHalf(translation[0]), roundToNearestHalf(translation[1]));
         Node end = new Node(roundToNearestHalf(mDestinationTranslation[0]), roundToNearestHalf(mDestinationTranslation[1]));
 
-        if(PathFinder.pathfind(start, end)) {
+        if (PathFinder.pathfind(start, end)) {
             Toast t1 = Toast.makeText(getApplicationContext(), "Path Found!", Toast.LENGTH_SHORT);
             t1.show();
 
             String path = "";
-            for(int i=0; i<PathFinder.squashedPath.size(); i++) {
+            for (int i = 0; i < PathFinder.squashedPath.size(); i++) {
                 path += String.valueOf(PathFinder.squashedPath.get(i).getX()) + ", "
                         + String.valueOf(PathFinder.squashedPath.get(i).getY()) + "\n";
             }
@@ -780,21 +805,21 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void getRotationsArray(List<Node> squashedPath) {
         rotationsArray = new float[squashedPath.size()];
-        rotationsArray[0] = (float)getEulerAngleZ(orientation);
-        for (int i=1; i<rotationsArray.length; i++) {
+        rotationsArray[0] = (float) getEulerAngleZ(orientation);
+        for (int i = 1; i < rotationsArray.length; i++) {
             Node curr = squashedPath.get(i);
-            Node prev = squashedPath.get(i-1);
+            Node prev = squashedPath.get(i - 1);
             double yDiff = curr.getY() - prev.getY();
             double xDiff = curr.getX() - prev.getX();
 
-            rotationsArray[i] = ((float)Math.toDegrees(Math.atan2(yDiff, xDiff)) + 360) % 360;
+            rotationsArray[i] = ((float) Math.toDegrees(Math.atan2(yDiff, xDiff)) + 360) % 360;
         }
     }
 
     private void updateWaypoint() {
         ++waypointIterator;
 
-        if(waypointIterator == squashedPath.size()) {
+        if (waypointIterator == squashedPath.size()) {
             Toast t2 = Toast.makeText(getApplicationContext(),
                     "Reached Destination!", Toast.LENGTH_SHORT);
             t2.show();
@@ -814,10 +839,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
 
         // Calculate the necessary rotation difference
-        float rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator-1];
+        float rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator - 1];
 
         // Checking for the min of rotating either left or right
-        if(Math.abs(rotationDiff) > 180) {
+        if (Math.abs(rotationDiff) > 180) {
             if (rotationDiff > 0) {
                 rotationDiff = rotationDiff - 360;
             } else {
@@ -839,27 +864,24 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     @Override
     public void onInit(int status) {
-        if(status == TextToSpeech.SUCCESS){
-            int result=mTts.setLanguage(Locale.US);
-            if(result==TextToSpeech.LANG_MISSING_DATA ||
-                    result==TextToSpeech.LANG_NOT_SUPPORTED){
+        if (status == TextToSpeech.SUCCESS) {
+            int result = mTts.setLanguage(Locale.US);
+            if (result == TextToSpeech.LANG_MISSING_DATA ||
+                    result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("error", "This Language is not supported");
-            }
-            else{
+            } else {
                 ConvertTextToSpeech("Starting");
             }
-        }
-        else
+        } else
             Log.e("error", "Initilization Failed!");
     }
 
     private void ConvertTextToSpeech(String text) {
-        if(text != null){
-            mTts.speak(text,TextToSpeech.QUEUE_FLUSH,null);
+        if (text != null) {
+            mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
         }
 
     }
-
 
 
     public class MyBroadcastReceiver extends BroadcastReceiver {
@@ -870,8 +892,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
             Log.d("broadcast", "broadcast started");
 
             Bundle b = intent.getExtras();
-            if(b != null) {
-                if(b.getString("valueName") != null) {
+            if (b != null) {
+                if (b.getString("valueName") != null) {
                     String arduinoValue = b.getString("valueName");
                     Log.d("click value broadcast: ", arduinoValue);
                     processArduinoValues(arduinoValue);
@@ -937,7 +959,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             String content = jsonObj.toString();
 
             try {
-                FileOutputStream outputStream= openFileOutput(fileName, Context.MODE_PRIVATE);
+                FileOutputStream outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
                 outputStream.write(content.getBytes());
                 outputStream.close();
             } catch (Exception e) {
@@ -953,11 +975,12 @@ public class HelloAreaDescriptionActivity extends Activity implements
     public void loadValuesFromJson() {
         try {
             JSONObject jsonObj = new JSONObject(jsonFileString);
-            coordinateSet = new ObjectMapper().readValue(jsonObj.getString("coordinateSet"), new TypeReference<Set<Node>>(){});
-            maxX = (float)jsonObj.getDouble("maxX");
-            maxY = (float)jsonObj.getDouble("maxY");
-            minX = (float)jsonObj.getDouble("minX");
-            minY = (float)jsonObj.getDouble("minY");
+            coordinateSet = new ObjectMapper().readValue(jsonObj.getString("coordinateSet"), new TypeReference<Set<Node>>() {
+            });
+            maxX = (float) jsonObj.getDouble("maxX");
+            maxY = (float) jsonObj.getDouble("maxY");
+            minX = (float) jsonObj.getDouble("minX");
+            minY = (float) jsonObj.getDouble("minY");
         } catch (JSONException e) {
             e.printStackTrace();
         } catch (JsonParseException e) {
@@ -969,13 +992,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
     }
 
-    public void printMatrix()  {
-        loadValuesFromJson();
-
-        int xLength = (int)((maxX - minX)/granularity) + 1;
-        int yLength = (int)((maxY - minY)/granularity) + 1;
-        int offsetX = Math.abs((int)(minX/granularity));
-        int offsetY = Math.abs((int)(minY/granularity));
+    public void printMatrix() {
+        int xLength = (int) ((maxX - minX) / granularity) + 1;
+        int yLength = (int) ((maxY - minY) / granularity) + 1;
+        int offsetX = Math.abs((int) (minX / granularity));
+        int offsetY = Math.abs((int) (minY / granularity));
         String s = "";
 
         boolean[][] coordinateMatrix = new boolean[xLength][yLength];
@@ -985,8 +1006,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
             coordinateMatrix[(int) (current.getX() / granularity) + offsetX][(int) (current.getY() / granularity) + offsetY] = true;
         }
 
-        for(int i=0; i<xLength; i++) {
-            for(int j=0; j<yLength; j++) {
+        for (int i = 0; i < xLength; i++) {
+            for (int j = 0; j < yLength; j++) {
                 if (coordinateMatrix[i][j]) {
                     s += "1,";
                 } else {
@@ -997,9 +1018,4 @@ public class HelloAreaDescriptionActivity extends Activity implements
         }
         Log.i("Matrix", s);
     }
-//
-//    public void cancelNavigating() {
-//        mIsNavigatingMode = false;
-//        storeValuesToJSON(selectedUUID);
-//    }
 }
