@@ -850,7 +850,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
         }
         mRotationDiff = rotationDiff;
-        ConvertTextToSpeech("Please hold for rotation");
+        ConvertTextToSpeech("Please place the cane in front of you and press select to prepare for rotation");
 
         // Send rotation through bluetooth
         float[] rotation = new float[1];
