@@ -607,8 +607,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void downButtonClicked() {
         if (savedWaypointNames.size() != 0) {
-            if (chosenIndex == 0) {
-                chosenIndex = savedWaypointNames.size() - 1;
+            if (chosenIndex == savedWaypointNames.size()) {
+                chosenIndex = 0;
             } else {
                 chosenIndex++;
             }
