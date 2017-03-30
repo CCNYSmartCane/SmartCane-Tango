@@ -33,7 +33,7 @@ class PathFinder {
             if (current.equals(goal)) {
                 totalPath = reconstructPath(current);
                 if(totalPath.size() > 2) {
-                    squashedPath = DouglasPeucker(totalPath, 1.5);
+                    squashedPath = DouglasPeucker(totalPath, 0.75);
                 } else {
                     squashedPath = totalPath;
                 }
@@ -127,8 +127,8 @@ class PathFinder {
         // If dmax is greater than the threshold, recursively call both sides
         List<Node> results = new ArrayList<Node>();
         if (dmax > epsilon) {
-            List<Node> results1 = DouglasPeucker(path.subList(0, index), epsilon);
-            List<Node> results2 = DouglasPeucker(path.subList(index, last), epsilon);
+            List<Node> results1 = DouglasPeucker(path.subList(0, index+1), epsilon);
+            List<Node> results2 = DouglasPeucker(path.subList(index, last+1), epsilon);
             results.addAll(results1);
             // Remove the middle otherwise there would be duplicate instances
             results.remove(results.size() - 1);

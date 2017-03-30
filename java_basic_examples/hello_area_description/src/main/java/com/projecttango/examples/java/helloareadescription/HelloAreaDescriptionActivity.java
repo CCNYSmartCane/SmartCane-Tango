@@ -780,7 +780,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         PathFinder.granularity = granularity;
 
         Node start = new Node(roundToNearestHalf(translation[0]), roundToNearestHalf(translation[1]));
+        Log.i("Node", start.getX() + " " + start.getY());
         Node end = new Node(roundToNearestHalf(mDestinationTranslation[0]), roundToNearestHalf(mDestinationTranslation[1]));
+        Log.i("Node", end.getX() + " " + end.getY());
 
         if (PathFinder.pathfind(start, end)) {
             Toast t1 = Toast.makeText(getApplicationContext(), "Path Found!", Toast.LENGTH_SHORT);
@@ -796,6 +798,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
             t2.show();
 
             squashedPath = PathFinder.squashedPath;
+            Log.i("Path", path);
+
             getRotationsArray(squashedPath);
             mIsNavigatingMode = true;
             waypointIterator = 0;
@@ -997,6 +1001,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         int yLength = (int) ((maxY - minY) / granularity) + 1;
         int offsetX = Math.abs((int) (minX / granularity));
         int offsetY = Math.abs((int) (minY / granularity));
+
+        Log.i("Offset" , offsetX + " " + offsetY);
+
         String s = "";
 
         boolean[][] coordinateMatrix = new boolean[xLength][yLength];
@@ -1014,8 +1021,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
                     s += "0,";
                 }
             }
-            s += "\n";
+            Log.i("Matrix", s.substring(0, s.length()-1) + ";");
+            s="";
         }
-        Log.i("Matrix", s);
     }
 }
