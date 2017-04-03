@@ -241,15 +241,15 @@ public class HelloAreaDescriptionActivity extends Activity implements
         myReceiver = null;
     }
 
-//    @Override
-//    protected void onDestroy() {
-//        if (mIsNavigatingMode) {
-//            mIsNavigatingMode = false;
-//            storeValuesToJSON(selectedUUID);
-//        }
-//
-//        super.onDestroy();
-//    }
+    @Override
+    protected void onDestroy() {
+        if (mIsConstantSpaceRelocalize) {
+            storeValuesToJSON(selectedUUID);
+            printMatrix();
+        }
+
+        super.onDestroy();
+    }
 
     /**
      * Sets Texts views to display statistics of Poses being received. This also sets the buttons
