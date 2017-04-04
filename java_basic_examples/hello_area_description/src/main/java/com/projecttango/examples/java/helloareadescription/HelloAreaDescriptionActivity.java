@@ -94,7 +94,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private TextView mNextWaypointTextView;
     private TextView mDestinationTextView;
     private TextView mReachedDestinationTextView;
-    private TextView mLandMarkTextView;
     private TextView mJSONTextView;
 
     private Button mSaveAdfButton;
@@ -157,7 +156,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private final float granularity = 0.5f;
 
     private MediaPlayer player;
-    private final String soundFile = "";
     private Vibrator v;
     private int depthLevel = 3;
 
@@ -178,7 +176,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         listView = (ListView) findViewById(R.id.list);
 
         v = (Vibrator) getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE);
-//        player = MediaPlayer.create(this, soundFile);
+        player = MediaPlayer.create(getApplicationContext(), R.raw.censor_beep_5);
     }
 
     @Override
@@ -278,7 +276,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
         mNextRotationTextView = (TextView) findViewById(R.id.next_rotation_textview);
         mNextWaypointTextView = (TextView) findViewById(R.id.next_waypoint_textview);
         mReachedDestinationTextView = (TextView) findViewById(R.id.reached_destination_textview);
-        mLandMarkTextView = (TextView) findViewById(R.id.landMarkTextView);
         mSaveLandButton = (Button) findViewById(R.id.land_button);
         mLandmarkName = (EditText) findViewById(R.id.landmarkName);
         mDestLandmark = (EditText) findViewById(R.id.destLandmark);
@@ -495,27 +492,40 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 float avgDepth = calculateAveragedDepth(xyzij.points, xyzij.numPoints);
                 if (avgDepth > 0.66f && avgDepth <= 1f) {
                     if (depthLevel != 2) {
+                        player.stop();
                         v.cancel();
                         long[] pattern = {0, 30, 900};
                         v.vibrate(pattern, 0);
+                        player = MediaPlayer.create(getApplicationContext(), R.raw.censor_beep_5);
+                        player.setLooping(true);
+                        player.start();
                         depthLevel = 2;
                     }
                 } else if (avgDepth > 0.33f && avgDepth <= 0.66f) {
                     if (depthLevel != 1) {
+                        player.stop();
                         v.cancel();
                         long[] pattern = {0, 30, 500};
                         v.vibrate(pattern, 0);
+                        player = MediaPlayer.create(getApplicationContext(), R.raw.censor_beep_3);
+                        player.setLooping(true);
+                        player.start();
                         depthLevel = 1;
                     }
                 } else if (avgDepth > 0f && avgDepth <= 0.33f) {
                     if (depthLevel != 0) {
+                        player.stop();
                         v.cancel();
                         long[] pattern = {0, 30, 100};
                         v.vibrate(pattern, 0);
+                        player = MediaPlayer.create(getApplicationContext(), R.raw.censor_beep_1);
+                        player.setLooping(true);
+                        player.start();
                         depthLevel = 0;
                     }
                 } else {
                     if (depthLevel != 3) {
+                        player.stop();
                         v.cancel();
                         depthLevel = 3;
                     }
