@@ -149,7 +149,7 @@ class PathFinder {
                 / euclideanDistance(lineStart, lineEnd);
     }
 
-    private static double euclideanDistance(Node current, Node n) {
+    public static double euclideanDistance(Node current, Node n) {
         return Math.sqrt(Math.pow(current.getX() - n.getX(), 2) + Math.pow(current.getY() - n.getY(), 2));
     }
 }

@@ -534,7 +534,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
             downButtonClicked();
         }
         if (arduinoSent.equals("Rotation finished")) {
-            ConvertTextToSpeech(arduinoSent + ", walk forward");
+            Node nextWaypoint = squashedPath.get(waypointIterator);
+            Node current = new Node(Helper.roundToNearestHalf(translation[0]), Helper.roundToNearestHalf(translation[1]));
+            ConvertTextToSpeech(arduinoSent + ", walk forward " +
+                    Math.abs(Helper.roundToNearestHalf((float) (PathFinder.euclideanDistance(current, nextWaypoint) / 0.762)))
+                    + " steps");
         }
     }
 
@@ -775,7 +779,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
 
     private void handlePathFinding() {
-//        loadValuesFromJson();
         PathFinder.coordinateSet = coordinateSet;
         PathFinder.granularity = granularity;
 
