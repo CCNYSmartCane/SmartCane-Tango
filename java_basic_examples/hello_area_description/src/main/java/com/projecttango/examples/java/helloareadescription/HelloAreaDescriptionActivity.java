@@ -22,7 +22,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -60,6 +62,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -153,6 +156,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private final float granularity = 0.5f;
 
+    private MediaPlayer player;
+    private final String soundFile = "";
+    private Vibrator v;
+    private int depthLevel = 3;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -168,6 +176,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
         Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
 
         listView = (ListView) findViewById(R.id.list);
+
+        v = (Vibrator) getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE);
+//        player = MediaPlayer.create(this, soundFile);
     }
 
     @Override
@@ -339,6 +350,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
     private TangoConfig setTangoConfig(Tango tango, boolean isLearningMode, boolean isLoadAdf) {
         // Use default configuration for Tango Service.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
+
+        // Use depth perception
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
+        config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
+
         // Check if learning mode
         if (isLearningMode) {
             // Set learning mode to config.
@@ -476,7 +492,34 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
             @Override
             public void onPointCloudAvailable(TangoPointCloudData xyzij) {
-                // We are not using onPointCloudAvailable for this app.
+                float avgDepth = calculateAveragedDepth(xyzij.points, xyzij.numPoints);
+                if (avgDepth > 0.66f && avgDepth <= 1f) {
+                    if (depthLevel != 2) {
+                        v.cancel();
+                        long[] pattern = {0, 30, 900};
+                        v.vibrate(pattern, 0);
+                        depthLevel = 2;
+                    }
+                } else if (avgDepth > 0.33f && avgDepth <= 0.66f) {
+                    if (depthLevel != 1) {
+                        v.cancel();
+                        long[] pattern = {0, 30, 500};
+                        v.vibrate(pattern, 0);
+                        depthLevel = 1;
+                    }
+                } else if (avgDepth > 0f && avgDepth <= 0.33f) {
+                    if (depthLevel != 0) {
+                        v.cancel();
+                        long[] pattern = {0, 30, 100};
+                        v.vibrate(pattern, 0);
+                        depthLevel = 0;
+                    }
+                } else {
+                    if (depthLevel != 3) {
+                        v.cancel();
+                        depthLevel = 3;
+                    }
+                }
             }
 
             @Override
@@ -1024,5 +1067,21 @@ public class HelloAreaDescriptionActivity extends Activity implements
             Log.i("Matrix", s.substring(0, s.length()-1) + ";");
             s="";
         }
+    }
+
+    /**
+     * Calculates the average depth from a point cloud buffer.
+     */
+    private float calculateAveragedDepth(FloatBuffer pointCloudBuffer, int numPoints) {
+        float totalZ = 0;
+        float averageZ = 0;
+        if (numPoints != 0) {
+            int numFloats = 4 * numPoints;
+            for (int i = 2; i < numFloats; i = i + 4) {
+                totalZ = totalZ + pointCloudBuffer.get(i);
+            }
+            averageZ = totalZ / numPoints;
+        }
+        return averageZ;
     }
 }
