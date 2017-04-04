@@ -537,7 +537,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
             Node nextWaypoint = squashedPath.get(waypointIterator);
             Node current = new Node(Helper.roundToNearestHalf(translation[0]), Helper.roundToNearestHalf(translation[1]));
             ConvertTextToSpeech(arduinoSent + ", walk forward " +
-                    Math.abs(Helper.roundToNearestHalf((float) (PathFinder.euclideanDistance(current, nextWaypoint) / 0.762)))
+                    Helper.roundToNearestHalf((float) (PathFinder.euclideanDistance(current, nextWaypoint) / 0.762))
                     + " steps");
         }
     }
