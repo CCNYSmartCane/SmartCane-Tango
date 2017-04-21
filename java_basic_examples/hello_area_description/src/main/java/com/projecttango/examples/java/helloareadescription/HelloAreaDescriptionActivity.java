@@ -382,6 +382,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
 
+        ConvertTextToSpeech("Please walk around to localize the device");
+
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 
             @Override
@@ -401,6 +403,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
 
                             mIsRelocalized = true;
+                            ConvertTextToSpeech("Device localized");
 
                             translation = pose.getTranslationAsFloats();
                             orientation = pose.getRotationAsFloats();
