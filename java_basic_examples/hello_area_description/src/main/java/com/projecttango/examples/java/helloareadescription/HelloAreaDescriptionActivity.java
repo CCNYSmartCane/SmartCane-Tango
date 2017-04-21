@@ -382,8 +382,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
                 TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
 
-        ConvertTextToSpeech("Please walk around to localize the device");
-
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 
             @Override
@@ -601,10 +599,9 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void upButtonClicked() {
         if (savedWaypointNames.size() != 0) {
-            if (chosenIndex == 0) {
+            chosenIndex--;
+            if (chosenIndex < 0) {
                 chosenIndex = savedWaypointNames.size() - 1;
-            } else {
-                chosenIndex--;
             }
 
             String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
@@ -614,12 +611,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private void downButtonClicked() {
         if (savedWaypointNames.size() != 0) {
-            if (chosenIndex == savedWaypointNames.size()) {
+            chosenIndex++;
+            if (chosenIndex > savedWaypointNames.size() - 1) {
                 chosenIndex = 0;
-            } else {
-                chosenIndex++;
             }
-
 
             String speakToUser = "Waypoint" + savedWaypointNames.get(chosenIndex);
             ConvertTextToSpeech(speakToUser);
