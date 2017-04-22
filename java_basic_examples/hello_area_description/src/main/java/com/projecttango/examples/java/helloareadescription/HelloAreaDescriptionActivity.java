@@ -401,7 +401,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
 
                             mIsRelocalized = true;
-                            ConvertTextToSpeech("Device localized");
+                           // ConvertTextToSpeech("Device localized");
 
                             translation = pose.getTranslationAsFloats();
                             orientation = pose.getRotationAsFloats();
