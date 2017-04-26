@@ -153,6 +153,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     private final float granularity = 0.5f;
 
+    private Node end;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -401,7 +403,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
 
                             mIsRelocalized = true;
-                           // ConvertTextToSpeech("Device localized");
+                            // ConvertTextToSpeech("Device localized");
 
                             translation = pose.getTranslationAsFloats();
                             orientation = pose.getRotationAsFloats();
@@ -443,25 +445,43 @@ public class HelloAreaDescriptionActivity extends Activity implements
                                     mCurrentLocationTextView.setText(mPositionString);
                                     mZRotationTextView.setText(mZRotationString);
 
-                                    float lowerBound_X = mDestinationTranslation[0] - 0.15f;
-                                    float lowerBound_Y = mDestinationTranslation[1] - 0.15f;
-                                    float lowerBound_Z = mDestinationTranslation[2] - 0.15f;
+                                    float lowerBound_X = mDestinationTranslation[0] - 0.5f;
+                                    float lowerBound_Y = mDestinationTranslation[1] - 0.5f;
+                                    float lowerBound_Z = mDestinationTranslation[2] - 0.5f;
 
-                                    float upperBound_X = mDestinationTranslation[0] + 0.15f;
-                                    float upperBound_Y = mDestinationTranslation[1] + 0.15f;
-                                    float upperBound_Z = mDestinationTranslation[2] + 0.15f;
+                                    float upperBound_X = mDestinationTranslation[0] + 0.5f;
+                                    float upperBound_Y = mDestinationTranslation[1] + 0.5f;
+                                    float upperBound_Z = mDestinationTranslation[2] + 0.5f;
 
                                     mReachedDestinationTextView.setText(String.valueOf((lowerBound_X <= translation[0] && translation[0] <= upperBound_X) &&
                                             (lowerBound_Y <= translation[1] && translation[1] <= upperBound_Y) &&
                                             (lowerBound_Z <= translation[2] && translation[2] <= upperBound_Z)));
 
                                     if (mIsNavigatingMode) {
-                                        Node nextWaypoint = squashedPath.get(waypointIterator);
-                                        if ((roundToNearestHalf(translation[0]) == nextWaypoint.getX())
-                                                && (roundToNearestHalf(translation[1]) == nextWaypoint.getY())) {
-                                            // Made it to the nextWaypoint
-                                            updateWaypoint();
+                                        if (squashedPath.size() > 1) {
+                                            Node nextWaypoint = squashedPath.get(1);
+                                            if (((nextWaypoint.getX() - 0.5f) <= translation[0] && translation[0] <= (nextWaypoint.getX() + 0.5f))
+                                                    && ((nextWaypoint.getY() - 0.5f) <= translation[1] && translation[1] <= (nextWaypoint.getY() + 0.5f))) {
+                                                // Made it to the nextWaypoint
+                                                if (mReachedDestinationTextView.getText().equals("true")) {
+                                                    Toast t2 = Toast.makeText(getApplicationContext(),
+                                                            "Reached Destination!", Toast.LENGTH_SHORT);
+                                                    t2.show();
+
+                                                    ConvertTextToSpeech("Reached Destination");
+
+                                                    mIsNavigatingMode = false;
+                                                    mNextWaypointTextView.setText("");
+                                                    mNextRotationTextView.setText("");
+                                                } else {
+                                                    handlePathFinding(translation, mDestinationTranslation);
+                                                    updateWaypoint();
+                                                }
+
+                                            }
                                         }
+                                    } else {
+                                        mIsNavigatingMode = false;
                                     }
                                 }
                             }
@@ -535,10 +555,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
             downButtonClicked();
         }
         if (arduinoSent.equals("Rotation finished")) {
-            Node nextWaypoint = squashedPath.get(waypointIterator);
+            Node nextWaypoint = squashedPath.get(1);
             Node current = new Node(Helper.roundToNearestHalf(translation[0]), Helper.roundToNearestHalf(translation[1]));
             ConvertTextToSpeech(arduinoSent + ", walk forward " +
-                    Helper.roundToNearestHalf((float) (PathFinder.euclideanDistance(current, nextWaypoint) / 0.762))
+                    Math.round((float) (PathFinder.euclideanDistance(current, nextWaypoint) / 0.7))
                     + " steps");
         }
     }
@@ -776,13 +796,13 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
 
-    private void handlePathFinding() {
+    private void handlePathFinding(float[] translation, float[] destination) {
         PathFinder.coordinateSet = coordinateSet;
         PathFinder.granularity = granularity;
 
         Node start = new Node(roundToNearestHalf(translation[0]), roundToNearestHalf(translation[1]));
         Log.i("Node", start.getX() + " " + start.getY());
-        Node end = new Node(roundToNearestHalf(mDestinationTranslation[0]), roundToNearestHalf(mDestinationTranslation[1]));
+        end = new Node(roundToNearestHalf(destination[0]), roundToNearestHalf(destination[1]));
         Log.i("Node", end.getX() + " " + end.getY());
 
         if (PathFinder.pathfind(start, end)) {
@@ -822,48 +842,35 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     private void updateWaypoint() {
-        ++waypointIterator;
+        if(squashedPath.size() > 1) {
+            Node nextWaypoint = squashedPath.get(1);
 
-        if (waypointIterator == squashedPath.size()) {
-            Toast t2 = Toast.makeText(getApplicationContext(),
-                    "Reached Destination!", Toast.LENGTH_SHORT);
-            t2.show();
+            mNextWaypointTextView.setText(nextWaypoint.getX() +
+                    ", " + nextWaypoint.getY());
+            mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
 
-            ConvertTextToSpeech("Reached Destination");
+            // Calculate the necessary rotation difference
+            float rotationDiff = rotationsArray[1] - rotationsArray[0];
 
-            mIsNavigatingMode = false;
-            mNextWaypointTextView.setText("");
-            mNextRotationTextView.setText("");
-            return;
-        }
-
-        Node nextWaypoint = squashedPath.get(waypointIterator);
-
-        mNextWaypointTextView.setText(nextWaypoint.getX() +
-                ", " + nextWaypoint.getY());
-        mNextRotationTextView.setText(String.valueOf(rotationsArray[waypointIterator]));
-
-        // Calculate the necessary rotation difference
-        float rotationDiff = rotationsArray[waypointIterator] - rotationsArray[waypointIterator - 1];
-
-        // Checking for the min of rotating either left or right
-        if (Math.abs(rotationDiff) > 180) {
-            if (rotationDiff > 0) {
-                rotationDiff = rotationDiff - 360;
-            } else {
-                rotationDiff = 360 - Math.abs(rotationDiff);
+            // Checking for the min of rotating either left or right
+            if (Math.abs(rotationDiff) > 180) {
+                if (rotationDiff > 0) {
+                    rotationDiff = rotationDiff - 360;
+                } else {
+                    rotationDiff = 360 - Math.abs(rotationDiff);
+                }
             }
+            mRotationDiff = rotationDiff;
+            ConvertTextToSpeech("Please place the cane in front of you and press select to prepare for rotation");
+
+            // Send rotation through bluetooth
+            float[] rotation = new float[1];
+            rotation[0] = rotationDiff;
+
+            Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
+            serviceIntent.putExtra("rotation", rotation);
+            getApplicationContext().startService(serviceIntent);
         }
-        mRotationDiff = rotationDiff;
-        ConvertTextToSpeech("Please place the cane in front of you and press select to prepare for rotation");
-
-        // Send rotation through bluetooth
-        float[] rotation = new float[1];
-        rotation[0] = rotationDiff;
-
-        Intent serviceIntent = new Intent(getApplicationContext(), BluetoothChatService.class);
-        serviceIntent.putExtra("rotation", rotation);
-        getApplicationContext().startService(serviceIntent);
     }
 
 
@@ -944,7 +951,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                 if (mIsRelocalized) {
                     Log.d("pathfinding", "starting");
-                    handlePathFinding();
+                    handlePathFinding(translation, mDestinationTranslation);
                 } else
                     Log.d("mIsRelocalized", String.valueOf(mIsRelocalized));
             }
@@ -1003,7 +1010,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
         int offsetX = Math.abs((int) (minX / granularity));
         int offsetY = Math.abs((int) (minY / granularity));
 
-        Log.i("Offset" , offsetX + " " + offsetY);
+        Log.i("Offset", offsetX + " " + offsetY);
 
         String s = "";
 
@@ -1022,8 +1029,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
                     s += "0,";
                 }
             }
-            Log.i("Matrix", s.substring(0, s.length()-1) + ";");
-            s="";
+            Log.i("Matrix", s.substring(0, s.length() - 1) + ";");
+            s = "";
         }
     }
 }
