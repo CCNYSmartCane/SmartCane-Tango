@@ -167,7 +167,6 @@ public class HelloAreaDescriptionActivity extends Activity implements
         String toastMessage = "Selected map: " + selectedUUID + "loaded";
         Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
 
-        listView = (ListView) findViewById(R.id.list);
     }
 
     @Override
@@ -404,6 +403,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                             translation = pose.getTranslationAsFloats();
                             orientation = pose.getRotationAsFloats();
+
+                            // CURRENT LOCATION
+
+                            float currentX = translation[0];
+                            float currentY = translation[1];
 
                             mPositionString = "X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2];
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
