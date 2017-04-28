@@ -54,6 +54,11 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
+import org.opencv.utils.Converters;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -65,10 +70,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.Vector;
 
 import static com.projecttango.examples.java.helloareadescription.Helper.getEulerAngleZ;
 import static com.projecttango.examples.java.helloareadescription.Helper.roundToNearestHalf;
 import static java.lang.String.valueOf;
+import static org.opencv.core.CvType.CV_32FC1;
+import static org.opencv.imgproc.Imgproc.getAffineTransform;
 
 /**
  * Main Activity class for the Area Description example. Handles the connection to the Tango service
@@ -77,6 +85,11 @@ import static java.lang.String.valueOf;
 public class HelloAreaDescriptionActivity extends Activity implements
         SetAdfNameDialog.CallbackListener,
         SaveAdfTask.SaveAdfListener, TextToSpeech.OnInitListener {
+
+    static {
+        // If you use opencv 2.4, System.loadLibrary("opencv_java")
+        System.loadLibrary("opencv_java3");
+    }
 
     private static final String TAG = HelloAreaDescriptionActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
@@ -166,6 +179,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
         selectedUUID = getIntent().getExtras().getString("uuidName");
         String toastMessage = "Selected map: " + selectedUUID + "loaded";
         Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
+
+
 
     }
 
@@ -411,6 +426,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
                             mPositionString = "X:" + translation[0] + ", Y:" + translation[1] + ", Z:" + translation[2];
                             mZRotationString = String.valueOf(getEulerAngleZ(orientation));
+
+                            align_coordinates(currentX,currentY);
 
                             updateCoordinates();
                         } else {
@@ -1028,5 +1045,74 @@ public class HelloAreaDescriptionActivity extends Activity implements
             Log.i("Matrix", s.substring(0, s.length()-1) + ";");
             s="";
         }
+    }
+
+    private void align_coordinates(float currentX, float currentY){
+        Point tango_coord1 = new Point(); // beacon 6708
+        tango_coord1.x = 4.32;
+        tango_coord1.y = -2.77;
+        Point tango_coord2 = new Point(); // beacon 38988
+        tango_coord2.x = 8.72;
+        tango_coord2.y = -4.17;
+        Point tango_coord3 = new Point(); // beacon 23110
+        tango_coord3.x = 10.61;
+        tango_coord3.y = -5.65;
+        List <Point> tangoList = new ArrayList<Point>();
+        tangoList.add(tango_coord1);
+        tangoList.add(tango_coord2);
+        tangoList.add(tango_coord3);
+
+        Point map_coord1 = new Point(); // beacon 6708
+        map_coord1.x = 777.21985;
+        map_coord1.y = 1502.6268;
+        Point map_coord2 = new Point(); // beacon 38988
+        map_coord2.x = 598.5553;
+        map_coord2.y = 2022.0793;
+        Point map_coord3 = new Point(); // beacon 23110
+        map_coord3.x = 250.12984;
+        map_coord3.y = 2336.1667;
+        List <Point> mapList = new ArrayList<Point>();
+        mapList.add(map_coord1);
+        mapList.add(map_coord2);
+        mapList.add(map_coord3);
+
+        MatOfPoint2f tangoPoints = new MatOfPoint2f();
+        tangoPoints.fromList(tangoList);
+        MatOfPoint2f mapPoints = new MatOfPoint2f();
+        mapPoints.fromList(mapList);
+
+        // get transformation matrix
+        Mat warp_mat = new Mat( 2, 3, CV_32FC1);
+        warp_mat = getAffineTransform(tangoPoints,mapPoints);
+
+        // get current location
+        Vector<Point> currentLocation = new Vector<Point>();
+        Point currentLocationPoint = new Point();
+        currentLocationPoint.x = currentX;
+        currentLocationPoint.y = currentY;
+        currentLocation.add(currentLocationPoint);
+
+        // convert current location point to a matrix
+        Mat pointWarp = Converters.vector_Point_to_Mat(currentLocation);
+
+        // result matrix has same dimensions as original point matrix
+        Mat resultMat = new Mat(pointWarp.rows(),pointWarp.cols(),CV_32FC1);
+
+        // do matrix multiplication to transform point: resultMat = pointWarp * warp_mat
+        Core.multiply(pointWarp,warp_mat,resultMat);
+
+        Log.d("resultMat",String.valueOf(resultMat));
+
+        // convert resultMat to a mat of points and get first (and only) point
+        MatOfPoint2f newLocationMat = new MatOfPoint2f(resultMat);
+        Point newLocationPoints[] = newLocationMat.toArray();
+        Point newLocationPoint = new Point();
+        newLocationPoint = newLocationPoints[0];
+
+        // new coordinates of aligned point
+        float newCurrentLocation_x = (float)newLocationPoint.x;
+        float newCurrentLocation_y = (float)newLocationPoint.y;
+
+
     }
 }
